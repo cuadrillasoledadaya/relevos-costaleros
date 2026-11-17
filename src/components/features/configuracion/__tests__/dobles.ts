@@ -292,6 +292,42 @@ export function crearRepositorios(almacen: Almacen): RepositoriosPaso {
       const [tramo] = almacen.tramos.splice(indice, 1);
       return { data: tramo ?? null, error: null };
     },
+    reordenar: async (pasoId, orden) => {
+      const delPaso = almacen.tramos.filter(
+        (tramo) => tramo.paso_id === pasoId,
+      );
+      if (orden.length !== delPaso.length) {
+        return {
+          data: [],
+          error: {
+            message:
+              "La lista de tramos no coincide con los tramos guardados del paso.",
+          },
+        };
+      }
+      const porId = new Map(delPaso.map((tramo) => [tramo.id, tramo]));
+      for (const [indice, id] of orden.entries()) {
+        const tramo = porId.get(id);
+        if (!tramo) {
+          return {
+            data: [],
+            error: {
+              message:
+                "La lista de tramos no coincide con los tramos guardados del paso.",
+            },
+          };
+        }
+        tramo.ordinal = indice + 1;
+        tramo.kind =
+          indice === 0
+            ? "salida"
+            : indice === orden.length - 1
+              ? "entrada"
+              : "normal";
+      }
+      const ordenados = [...delPaso].sort((a, b) => a.ordinal - b.ordinal);
+      return { data: ordenados, error: null };
+    },
   };
 
   const costaleros: RepositorioCostaleros = {

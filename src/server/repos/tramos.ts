@@ -30,6 +30,15 @@ export type RepositorioTramos = {
     cambios: TramoActualizacionInput,
   ): Promise<ResultadoRepositorio<Tramo>>;
   eliminar(id: string): Promise<ResultadoRepositorio<{ id: string }>>;
+  /**
+   * Reordena los tramos del paso de forma transaccional: `orden` es la lista
+   * de ids en el orden nuevo. No deja ordinales repetidos ni huecos y
+   * recalcula los tipos canónicos (el primero `salida`, el último `entrada`).
+   */
+  reordenar(
+    pasoId: string,
+    orden: string[],
+  ): Promise<ResultadoListaRepositorio<Tramo>>;
 };
 
 export function crearRepositorioTramos(
@@ -100,6 +109,19 @@ export function crearRepositorioTramos(
           .eq("id", id)
           .select("id")
           .single(),
+      );
+    },
+
+    /**
+     * Reordena los tramos del paso con la función `reordenar_tramos`: el
+     * cambio es atómico y recalcula los tipos canónicos del recorrido.
+     */
+    reordenar(pasoId, orden) {
+      return resultadoDeConsulta(
+        client.rpc<Tramo[]>("reordenar_tramos", {
+          paso_id: pasoId,
+          orden,
+        }),
       );
     },
   };

@@ -2,6 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type {
   DbError,
   QueryResult,
+  RpcResult,
   SupabaseClientLike,
   TableClient,
 } from "../../supabase/types";
@@ -21,6 +22,20 @@ const TABLAS_PERMITIDAS = new Set([
   "relevos",
 ]);
 
+/**
+ * Funciones de la base de datos que el doble sabe llamar, con sus argumentos
+ * en el orden en que los declara la función.
+ */
+const FUNCIONES_PERMITIDAS: Record<
+  string,
+  Array<{ nombre: string; tipo: string }>
+> = {
+  reordenar_tramos: [
+    { nombre: "paso_id", tipo: "uuid" },
+    { nombre: "orden", tipo: "uuid[]" },
+  ],
+};
+
 function errorPglite(error: unknown): DbError {
   const mensaje = error instanceof Error ? error.message : String(error);
   return { message: mensaje, code: "PGLITE_ERROR" };
@@ -31,6 +46,11 @@ function identificadorSeguro(valor: string): string {
     throw new Error(`Identificador SQL no permitido: ${valor}`);
   }
   return `"${valor}"`;
+}
+
+/** Literal de array de Postgres para pasar un array de ids por parámetro. */
+function literalArray(valores: readonly unknown[]): string {
+  return `{${valores.map((valor) => `"${String(valor)}"`).join(",")}}`;
 }
 
 class PgliteTableClient<T> implements TableClient<T> {
@@ -236,6 +256,32 @@ export function crearClientePglite(db: PGlite): SupabaseClientLike {
     },
     from<T>(tabla: string): TableClient<T> {
       return new PgliteTableClient<T>(db, tabla);
+    },
+    async rpc<T>(
+      fn: string,
+      args: Record<string, unknown> = {},
+    ): Promise<RpcResult<T>> {
+      const declaracion = FUNCIONES_PERMITIDAS[fn];
+      if (!declaracion) {
+        throw new Error(`Función no permitida en el doble de prueba: ${fn}`);
+      }
+      const parametros: unknown[] = [];
+      const marcadores = declaracion.map((argumento, indice) => {
+        const valor = args[argumento.nombre];
+        parametros.push(
+          argumento.tipo.endsWith("[]")
+            ? literalArray(Array.isArray(valor) ? valor : [])
+            : valor,
+        );
+        return `$${indice + 1}::${argumento.tipo}`;
+      });
+      const sql = `select * from public.${identificadorSeguro(fn)}(${marcadores.join(", ")})`;
+      try {
+        const resultado = await db.query<T>(sql, parametros);
+        return { data: resultado.rows as unknown as T, error: null };
+      } catch (error) {
+        return { data: null, error: errorPglite(error) };
+      }
     },
   };
 }
