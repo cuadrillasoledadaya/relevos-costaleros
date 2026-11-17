@@ -143,8 +143,8 @@ Objetivo blando EQ: minimizar la dispersión de descansos dentro de cada pool y 
 | T2  | S3                                     | Migraciones, RLS, seed, repositorios, schemas zod                                         | W1     | `1612d61` + `fix(db): ancla de pertenencia del costalero` (L6)        | Hecha     |
 | T3  | S5, S6, S7, S8, S9, S10, S11, S12, S13 | Dominio puro: glosario, modelo, reglas, factibilidad, solver                              | W2     | `1612d61`                                                             | Hecha     |
 | T4  | S1, S4                                 | Design system, PWA (manifest, iconos, service worker), shell                              | W3     | `1612d61`                                                             | Hecha     |
-| T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | `feat(auth): login con supabase y middleware de sesion`               | Pendiente |
-| T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | `feat(paso): wizard de seis pasos con reparto por trabajadera`        | Pendiente |
+| T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | cadena de 7 PRs (#2 a #8) + `fix(db): indice unico parcial`           | Hecha     |
+| T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | cadena de 5 PRs (#9 a #13)                                            | Hecha     |
 | T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `feat(tramos): alta, renombre y borrado de tramos`                    | Pendiente |
 | T8  | S13, S17                               | Plan de relevos: API de cálculo, pantalla principal, estadísticas, versiones              | W7     | `feat(plan): pantalla principal con vistas por tramo y por costalero` | Pendiente |
 | T9  | S18, S19                               | Hoja por trabajadera, estilos de impresión A4, exportación CSV                            | W8     | `feat(hoja): vista por trabajadera con tabla de tramos y puestos`     | Pendiente |
@@ -319,3 +319,22 @@ explícita:
 - **Pendiente**: la verificación contra la nube (login real, alta de cuenta, logout, CRUD y P8) no
   se puede hacer hasta que el proyecto cloud de Supabase tenga migraciones aplicadas y variables
   cargadas. Las pruebas usan PGlite y dobles.
+
+### L10 · W5 entregada (T6) y corrección de un criterio del briefing
+
+- Wizard de seis pasos (P3): datos del paso, reparto por pool con la marca de F-4, asignación nominal
+  con el puesto de §6 visible, las dos boquillas del paso, propuesta de T y checklist F-1..F-6 con
+  semáforo. El botón de calcular el plan queda deshabilitado mientras falle cualquier precondición.
+  La regla S-7 (un costalero en un solo pool) se valida **en el servidor antes de escribir**: si se
+  incumple, no se persiste nada.
+- **La propuesta de T sale de `evaluarFactibilidad` (W2)**, no de una fórmula propia:
+  `tramosNecesarios` = `ceil(2 · pool / r)` con `r = pool − carga` (§7.3).
+- **Corrección de un criterio del briefing**: decía que con pool 6 y carga 5 el paso 5 propone
+  `T = 4`. §7.3 y los tests de W2 dan `T = 12`: con `T = 4` la precondición F-2 fallaría
+  (`T·r = 4 < 2·pool = 12`). El caso que sí da `T = 4` es pool 10 con carga 5. El criterio estaba
+  mal y se corrigió en `docs/briefings/BRIEFINGS.md`; el worker implementó la spec.
+- El puesto de cada costalero se **deriva** del orden del pool y no se persiste: §10 no da columna
+  de orden en `asignaciones` y P-6 dice que la app no decide quién es el corriente.
+- W5 no borra ni reordena tramos (eso es W6): crea los que faltan, renombra los existentes y avisa
+  de los que quedan fuera de la propuesta.
+- Verificado por el orquestador: lint, typecheck, suite completa y build en verde.
