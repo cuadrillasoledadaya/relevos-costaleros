@@ -44,6 +44,13 @@ const FUNCIONES_PERMITIDAS: Record<
     { nombre: "p_nombre", tipo: "text" },
     { nombre: "p_tipo", tipo: "text" },
   ],
+  guardar_plan: [
+    { nombre: "p_paso_id", tipo: "uuid" },
+    { nombre: "p_seed", tipo: "bigint" },
+    { nombre: "p_solver_version", tipo: "text" },
+    { nombre: "p_stats", tipo: "jsonb" },
+    { nombre: "p_relevos", tipo: "jsonb" },
+  ],
 };
 
 function errorPglite(error: unknown): DbError {
@@ -61,6 +68,18 @@ function identificadorSeguro(valor: string): string {
 /** Literal de array de Postgres para pasar un array de ids por parámetro. */
 function literalArray(valores: readonly unknown[]): string {
   return `{${valores.map((valor) => `"${String(valor)}"`).join(",")}}`;
+}
+
+/** Prepara un argumento RPC para que su cast de Postgres reciba el valor. */
+function valorRpc(tipo: string, valor: unknown): unknown {
+  if (tipo === "jsonb") {
+    const json = JSON.stringify(valor);
+    return json === undefined ? "null" : json;
+  }
+  if (tipo.endsWith("[]")) {
+    return literalArray(Array.isArray(valor) ? valor : []);
+  }
+  return valor;
 }
 
 class PgliteTableClient<T> implements TableClient<T> {
@@ -278,11 +297,7 @@ export function crearClientePglite(db: PGlite): SupabaseClientLike {
       const parametros: unknown[] = [];
       const marcadores = declaracion.map((argumento, indice) => {
         const valor = args[argumento.nombre];
-        parametros.push(
-          argumento.tipo.endsWith("[]")
-            ? literalArray(Array.isArray(valor) ? valor : [])
-            : valor,
-        );
+        parametros.push(valorRpc(argumento.tipo, valor));
         return `$${indice + 1}::${argumento.tipo}`;
       });
       const sql = `select * from public.${identificadorSeguro(fn)}(${marcadores.join(", ")})`;
