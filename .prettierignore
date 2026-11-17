@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+docs/spec/PROMPT-relevos-costaleros.md
+node_modules
+.next
+out
+build
+coverage
+playwright-report
+test-results
+*.tsbuildinfo
