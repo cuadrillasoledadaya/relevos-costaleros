@@ -29,7 +29,15 @@ export type RepositorioTramos = {
     id: string,
     cambios: TramoActualizacionInput,
   ): Promise<ResultadoRepositorio<Tramo>>;
-  eliminar(id: string): Promise<ResultadoRepositorio<{ id: string }>>;
+  eliminar(id: string): Promise<ResultadoListaRepositorio<Tramo>>;
+  /**
+   * Añade un tramo al final del recorrido (en una sola transacción) y
+   * recalcula los tipos canónicos: el primero `salida`, el último `entrada`.
+   */
+  anexar(
+    pasoId: string,
+    nombre: string,
+  ): Promise<ResultadoListaRepositorio<Tramo>>;
   /**
    * Reordena los tramos del paso de forma transaccional: `orden` es la lista
    * de ids en el orden nuevo. No deja ordinales repetidos ni huecos y
@@ -100,15 +108,26 @@ export function crearRepositorioTramos(
       );
     },
 
-    /** Elimina una fila de tramos por su id. */
+    /**
+     * Borra un tramo del recorrido. Lo hace la función `borrar_tramo`: borra y
+     * renumera en la misma transacción, así que nunca quedan huecos.
+     */
     eliminar(id) {
-      return resultadoDeFila(
-        client
-          .from<Tramo>("tramos")
-          .delete()
-          .eq("id", id)
-          .select("id")
-          .single(),
+      return resultadoDeConsulta(
+        client.rpc<Tramo[]>("borrar_tramo", { p_tramo_id: id }),
+      );
+    },
+
+    /**
+     * Añade un tramo al final del recorrido con la función `anexar_tramo`: el
+     * alta y el recálculo de los tipos ocurren en la misma transacción.
+     */
+    anexar(pasoId, nombre) {
+      return resultadoDeConsulta(
+        client.rpc<Tramo[]>("anexar_tramo", {
+          p_paso_id: pasoId,
+          p_nombre: nombre,
+        }),
       );
     },
 
