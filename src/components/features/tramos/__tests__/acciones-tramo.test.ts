@@ -174,4 +174,29 @@ describe("W6 · server actions de los tramos", () => {
     expect(resultado.error).toBe("El tramo no pertenece a este paso.");
     expect(almacen.find((tramo) => tramo.id === TRAMO_1)?.name).toBe("Salida");
   });
+
+  it("deja intactos el nombre y el tipo cuando la actualización atómica falla", async () => {
+    const almacen = crearAlmacen();
+    const repos = crearRepositorio(almacen);
+    repos.actualizarEnRecorrido = async () => ({
+      data: [],
+      error: { message: "No se ha podido actualizar el tramo." },
+    });
+
+    const renombre = await renombrarTramo(
+      { pasoId: PASO_ID, tramoId: TRAMO_2, nombre: "Plaza del pueblo" },
+      repos,
+    );
+    const tipo = await cambiarTipoTramo(
+      { pasoId: PASO_ID, tramoId: TRAMO_2, tipo: "entrada" },
+      repos,
+    );
+
+    expect(renombre.ok).toBe(false);
+    expect(tipo.ok).toBe(false);
+    expect(almacen.find((tramo) => tramo.id === TRAMO_2)).toMatchObject({
+      name: "Tramo 2",
+      kind: "normal",
+    });
+  });
 });

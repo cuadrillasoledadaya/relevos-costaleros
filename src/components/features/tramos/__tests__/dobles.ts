@@ -103,6 +103,42 @@ export function crearRepositorio(almacen: Tramo[]): RepositorioTramos {
       Object.assign(tramo, cambios);
       return { data: tramo, error: null };
     },
+    actualizarEnRecorrido: async (id, cambios) => {
+      const tramo = almacen.find((candidate) => candidate.id === id);
+      if (!tramo) {
+        return {
+          data: [],
+          error: { message: "El tramo no existe." },
+        };
+      }
+      if (cambios.name !== undefined && cambios.name.trim() === "") {
+        return {
+          data: [],
+          error: { message: "El nombre del tramo no puede estar vacío." },
+        };
+      }
+      if (
+        cambios.kind !== undefined &&
+        !["salida", "normal", "entrada"].includes(cambios.kind)
+      ) {
+        return {
+          data: [],
+          error: {
+            message:
+              "El tipo del tramo tiene que ser salida, normal o entrada.",
+          },
+        };
+      }
+
+      if (cambios.name !== undefined) tramo.name = cambios.name.trim();
+      if (cambios.kind !== undefined) tramo.kind = cambios.kind;
+      return {
+        data: almacen
+          .filter((candidate) => candidate.paso_id === tramo.paso_id)
+          .sort((a, b) => a.ordinal - b.ordinal),
+        error: null,
+      };
+    },
     eliminar: async (id) => {
       const indice = almacen.findIndex((tramo) => tramo.id === id);
       if (indice < 0) {
@@ -122,11 +158,6 @@ export function crearRepositorio(almacen: Tramo[]): RepositorioTramos {
     anexar: async (pasoId, nombre) => {
       const delPaso = almacen.filter((tramo) => tramo.paso_id === pasoId);
       const total = delPaso.length;
-      if (total >= 2) {
-        for (const tramo of delPaso) {
-          if (tramo.kind === "entrada") tramo.kind = "normal";
-        }
-      }
       const nuevo: Tramo = {
         id: idNuevo(),
         paso_id: pasoId,

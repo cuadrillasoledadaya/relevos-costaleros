@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { Alert } from "@/components/ui/Alert";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Table, TableCell, TableRow } from "@/components/ui/Table";
 import { TIPOS_TRAMO, type TipoTramo } from "@/domain/glosario";
+import { evaluarFactibilidad } from "@/domain/factibilidad";
 import {
   cambiarTipoTramo,
   crearTramo,
@@ -21,6 +22,7 @@ import {
   renombrarTramo,
 } from "@/server/actions/tramo";
 
+import { FactibilidadTramos } from "./FactibilidadTramos";
 import type {
   DatosPantallaTramos,
   ResultadoAccionTramos,
@@ -59,6 +61,22 @@ export function PantallaTramos(props: DatosPantallaTramos) {
   const [cargando, setCargando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const factibilidad = useMemo(
+    () =>
+      evaluarFactibilidad({
+        pasoId: props.paso.id,
+        trabajaderas: props.trabajadoras.map((trabajadera) => ({
+          id: trabajadera.id,
+          position: trabajadera.position,
+          carga: trabajadera.carga,
+          pool: [...trabajadera.pool],
+        })),
+        tramos: tramos.map((tramo) => ({ ...tramo })),
+        boquillas: [...props.boquillas],
+      }),
+    [props.boquillas, props.paso.id, props.trabajadoras, tramos],
+  );
 
   const ejecutar = async (
     accion: () => Promise<ResultadoAccionTramos>,
@@ -206,7 +224,7 @@ export function PantallaTramos(props: DatosPantallaTramos) {
         </Alert>
       ) : null}
 
-      <div className="flex flex-col gap-6">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
         <Card>
           <CardHeader>
             <CardTitle>Tramos del recorrido</CardTitle>
@@ -354,6 +372,12 @@ export function PantallaTramos(props: DatosPantallaTramos) {
             )}
           </CardBody>
         </Card>
+
+        <FactibilidadTramos
+          factibilidad={factibilidad}
+          trabajadoras={props.trabajadoras}
+          totalTramos={tramos.length}
+        />
       </div>
 
       <ConfirmDialog
