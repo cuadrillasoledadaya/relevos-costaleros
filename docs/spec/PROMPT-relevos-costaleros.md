@@ -394,6 +394,10 @@ create table cuadrillas (
 create table costaleros (
   id          uuid primary key default gen_random_uuid(),
   cuadrilla_id uuid not null references cuadrillas(id) on delete cascade,
+  -- Cuenta del costalero, si la tiene. El capataz puede dar de alta a un
+  -- costalero antes de que esa persona cree su cuenta: por eso es nullable y
+  -- la pertenencia se resuelve con `costaleros.profile_id = auth.uid()`.
+  profile_id  uuid references profiles(id) on delete set null,
   full_name   text not null,
   nickname    text,
   phone       text,
@@ -477,6 +481,14 @@ Los tests van en `src/server/repos/__tests__/` (PGlite, corren en CI) y en `supa
 - `capataz` dueño de la cuadrilla: lectura y escritura de todo lo de su cuadrilla.
 - `costalero`: lectura **solo** de `planes` con `status = 'publicado'` de cuadrillas a las que
   pertenece, y de nada más.
+
+**Ancla de pertenencia del costalero**: `costaleros.profile_id = auth.uid()`. Un costalero sin
+cuenta (`profile_id IS NULL`) no tiene sesión y no entra: el capataz lo da de alta y le reparte la
+hoja en papel. Es la columna que hace que el capataz pueda crear la cuadrilla **antes** de que
+nadie se registre, que es el flujo que describe el encargo.
+
+**Todas las políticas se escriben contra `auth.uid()`**, nunca contra `current_setting(...)` a
+mano: así el mismo SQL es válido en el Supabase real y en la verificación local.
 
 **PROHIBIDO**: desactivar RLS · crear tablas fuera de esta lista · guardar el plan en JSON plano
 en vez de en `planes` + `relevos`.
@@ -688,8 +700,8 @@ necesita un cambio, lo pide al orquestador.
 | `architect` (orquestador) | `docs/`, `README.md`, `odd/tasks/**` | Spec, ADRs, integración, cierre |
 | `data` | `supabase/**`, `src/server/repos/**`, `src/server/supabase/**` | Migraciones, RLS, seed, repositorios |
 | `core` | `src/domain/**` | Glosario, modelo, R1–R5, factibilidad, solver |
-| `ui` | `src/components/ui/**`, `public/**`, `src/app/globals.css`, `src/app/manifest.ts`, `src/app/layout.tsx` | Design system, PWA, shell |
-| `app` | `src/app/(auth)/**`, `src/app/(app)/cuadrillas/**`, `src/server/actions/{cuadrilla,costalero}.ts` | P1, P2, P8 |
+| `ui` | `src/components/ui/**`, `src/components/shell/**`, `public/**`, `src/app/globals.css`, `src/app/manifest.ts`, `src/app/layout.tsx`, `src/app/page.tsx` | Design system, PWA, shell |
+| `app` | `src/app/(auth)/**`, `src/app/(app)/layout.tsx`, `src/app/(app)/cuadrillas/**`, `src/server/actions/{cuadrilla,costalero}.ts` | P1, P2, P8 |
 | `setup` | `src/app/(app)/**/configuracion/**`, `src/app/(app)/**/tramos/**`, `src/server/actions/{paso,tramo}.ts` | P3, P4 |
 | `plan` | `src/app/(app)/**/plan/**`, `src/app/api/solve/**`, `src/server/actions/plan.ts`, `src/components/features/plan/**` | P5, `POST /api/solve` |
 | `hoja` | `src/app/(app)/**/hoja/**`, `src/app/api/export/**`, `src/lib/export/**`, `src/components/features/hoja/**` | P6, P7 |
@@ -709,7 +721,7 @@ ningún otro agente escribe ahí.
 | Archivo | Owner | Nota |
 |---|---|---|
 | `src/app/layout.tsx`, `src/app/globals.css`, `src/app/manifest.ts` | `ui` | Los crea W0 y los entrega a `ui` en W3; nadie más los toca |
-| `src/app/(app)/layout.tsx` | `ui` | Layout del grupo autenticado con el shell |
+| `src/app/(app)/layout.tsx` | `app` (W4) | Layout del grupo autenticado, monta el shell de W3 |
 | `src/styles/print.css` | `hoja` | Lo crea `hoja` en W8 y lo importa desde su propia pantalla. `ui` **no** lo toca ni lo referencia desde `globals.css` |
 | `src/app/(app)/cuadrillas/**/paso/[pasoId]/layout.tsx` | `setup` (W5) | Lo crea W5; W6, W7 y W8 solo lo leen |
 | `.github/workflows/ci.yml` | `architect` (W0) | `qa` solo crea `.github/workflows/e2e.yml` |
@@ -719,6 +731,10 @@ ningún otro agente escribe ahí.
 
 **Superficies sensibles** (un solo escritor a la vez): `src/app/layout.tsx`,
 `src/app/globals.css`, `src/app/(app)/layout.tsx`, `src/domain/**`, `src/lib/**`.
+
+**Nota sobre los paréntesis en las rutas**: el detector de solapamientos del runtime interpreta mal
+las rutas con paréntesis (`src/app/(app)/...`) y las da por solapadas con cualquier otra capa. Por
+eso el layout del grupo autenticado es de `app` (W4) y no de `ui` (W3).
 
 **Verificación de superficies**: antes de dar por buena una entrega, comprobá que
 `git diff --name-only main...HEAD` solo toca la superficie declarada en el briefing de esa
