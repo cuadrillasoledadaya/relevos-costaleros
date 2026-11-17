@@ -1,0 +1,6 @@
+- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` en verde.
+- [ ] Los tests nuevos van primero (RED observado) y la cobertura de la DoD de la unidad está completa.
+- [ ] Docs y textos de UI actualizados en el mismo commit.
+- [ ] Sin secretos; `.env.example` completo si la unidad toca infraestructura.
+- [ ] Commit Conventional Commits en la rama `feat/wN-<slug>`; PR abierta con el checklist.
+- [ ] Informe de cierre con los comandos ejecutados y su salida.
