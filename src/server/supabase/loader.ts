@@ -1,13 +1,22 @@
 type NombreModuloSupabase = "@supabase/ssr" | "@supabase/supabase-js";
 
 /**
- * Carga perezosa de un cliente oficial cuando el proyecto incorpore la dependencia.
- * Se evita una importación estática para que el typecheck del repositorio no requiera
- * una dependencia ausente; la dependencia oficial sigue siendo obligatoria en runtime.
+ * Carga perezosa del cliente oficial.
+ *
+ * El especificador va LITERAL en cada rama a propósito: si el módulo se pide
+ * con una variable, webpack no puede analizar la llamada y la compila a un
+ * contexto vacío que lanza "Cannot find module '@supabase/ssr'" en runtime. En
+ * los tests (vitest no empaqueta) el import dinámico nativo sí funcionaba, así
+ * que el fallo sólo aparecía en el bundle de producción.
+ *
+ * Las dos dependencias son obligatorias en runtime (`@supabase/ssr` y
+ * `@supabase/supabase-js` están en `dependencies`).
  */
 export async function cargarModuloSupabase(
   nombre: NombreModuloSupabase,
 ): Promise<unknown> {
-  const especificacion: string = nombre;
-  return import(especificacion);
+  if (nombre === "@supabase/ssr") {
+    return await import("@supabase/ssr");
+  }
+  return await import("@supabase/supabase-js");
 }
