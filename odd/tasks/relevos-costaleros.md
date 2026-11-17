@@ -1,0 +1,241 @@
+# Relevos de costaleros — PWA de gestión de relevos (Semana Santa)
+
+Feature del proyecto `relevos-costaleros`. Fuente de verdad normativa: `docs/spec/PROMPT-relevos-costaleros.md`
+(spec maestra). Este documento es el índice de trabajo: qué se pide (Specs), en qué unidades se
+resuelve (Tasks) y qué pasó (Log).
+
+---
+
+## Specs
+
+Cada Spec cita el texto del usuario **verbatim**. No se reinterpretan, no se amplían.
+
+### S1 · Aplicación
+
+> "La aplicacion quiero que se a una PWA totalmente funcional dedse moviles su principal propisito
+> aunque en algunas ocasiones alguien lo usara tambien desde un pc"
+
+PWA instalable, móvil primero, usable también desde PC. Offline: el shell y lo ya visto se
+conservan sin red.
+
+### S2 · Stack
+
+> "su lenguaje de programacion quiero que sea react o next.js si ves algo mejor indicarcelo"
+
+Decisión de arquitectura (ADR 0001): **Next.js 15 App Router + TypeScript**. Rationale en
+`docs/adr/0001-stack.md`.
+
+### S3 · Base de datos
+
+> "ira enlazado con una base de datos de supabase"
+
+Supabase Postgres + Auth + RLS. Schema en §10 de la spec.
+
+### S4 · GitHub y Vercel
+
+> "quiero que desde el inicio ya se cuente con github y vercel para el proyecto ya que sera asi
+> como lo suba a la red para poder utilizarlo"
+
+Repositorio GitHub con `main` protegido, CI y PRs. Proyecto Vercel enlazado al repo con variables
+de entorno y deploy automático en PR y en `main`.
+
+### S5 · Nomenclatura
+
+> "costaleros son las personas que cargan el paso."
+> "paso es la estrcutura la cual cargan los costaleros para llevar una imagen de semana santa, los
+> pasos constan debajo de el de trabajaderas."
+> "trabajaderas son la parte principal de un paso ahi es donde los costaleros cargan los pasos
+> normalmente los pasos tienen entre 6 y 10 trabajaderas dependiendo de la longuitud del paso."
+> "el boquilla costalero que manda debajo del paso es el encargado de trasmitir las ordenes del
+> capataz a sus compañeros desde debajo del paso , por lo general debe haber 2 boquillas por paso"
+
+Glosario cerrado (16 términos) en §5 de la spec. No se renombran ni se sustituyen por sinónimos.
+
+### S6 · Puestos de una trabajadera
+
+> "en cada trabajadera suelen ir 5 costaleros en la primera y la ultima trabajadera los costelaros
+> de nombran de la siguiente manera los dos exteriores son los pateros tanto el derecho como el
+> izquierdo a lado de los psteros van los fijadores que tambien hay 2 fijador derecho e izquierdo
+> y en el centro el corriente despues en las trabajaderas restantes todos se llaman igual menos
+> los pateros que pasan a llamerse costeros que tambien habra dos derecho e izquierdo."
+
+5 puestos por trabajadera, en el orden izquierda→derecha. Primera y última: patero, fijador,
+corriente, fijador, patero. Intermedias: costero, fijador, corriente, fijador, costero.
+Tabla en §6 de la spec.
+
+### S7 · Mecánica del relevo
+
+> "el recorrido desde la salida de la iglesia hasta la entrada de la iglesia sera particionada en
+> tramos en cada uno de los tramos saldran y entraran costaleros en las diferentes trabajaderas
+> para ir relevando a sus compañeros."
+
+Modelo pool/carga en §7 de la spec (supuesto S-1, declarado y trazable).
+
+### S8 · Regla 1
+
+> "Primera regla sera que los costaleros de la primera trabadera solo podran cambiarse en los
+> relevos de los tramos por compañeros de su misma trabajadera siempre eso es incambiable."
+
+### S9 · Regla 2
+
+> "segunda regla todos los costaleros deben salir al menos dos veces durante el recorrido."
+
+### S10 · Regla 3
+
+> "tercera regla los costaleros no deben estar fuera dos relevos seguidos."
+
+### S11 · Regla 4
+
+> "cuarta regla los dos boquillas no deben coincidir fuera del paso los dos a la vez."
+
+### S12 · Regla 5
+
+> "quinta regla los costaleros que hagan la salida no deben hacer la entrada dentro de lo posible,
+> osea seria el primer tramo y el ultimo no deberian de repetir los mismo siempre y cuando se
+> pueda."
+
+### S13 · Equidad
+
+> "para que todos los costaletos tengan el mismo descanso dentro de lo posible"
+
+Objetivo blando EQ: minimizar la dispersión de descansos dentro de cada pool y globalmente.
+
+### S14 · Login
+
+> "empezaremos con una pagina de login"
+
+### S15 · Cuadrilla y paso
+
+> "despues de login empezara la creacion de la cuadrilla y del paso habra que definir cuantos
+> costaleros tendra el paso y cuantas trabajaderas tendra tambien ademas de luego definir que
+> cantidad de costeleros definidos en el paso iran en cada trabajadera."
+
+### S16 · Tramos
+
+> "despues de terminar con la creacion principal del paso pasaremos a definir cuantos tramos seran
+> necesarios para cada trabajadera para que cada costalero salga un minimo de 2 veces durante el
+> recorrido , ademas tambien tendremos que colocar un apartado para la creacion de los tramos y
+> asignales un nombre."
+
+### S17 · Plan de relevos
+
+> "y luegtendremos tambien la parte principal que sera el plan de relevos que ahi sera donde
+> apliquemos la logica combinacional para que los costaleros temga sus relevos los mas equitativos
+> posible"
+
+### S18 · Hoja de relevos
+
+> "por ultimo temdremos una hoja para que el capataz vea visualmente como queda cada trabajedra
+> con todos los relevos ya realizados"
+
+### S19 · Exportación
+
+> "y por ultimo la exportacion de esos elevos para que sean imprimidos y repartidos a los
+> costaleros"
+
+---
+
+## Tasks
+
+| ID  | Specs                                  | Ruta                                                                                      | Unidad | Commit                                                                |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------- |
+| T1  | S2, S4                                 | Bootstrap: scaffold, lint, CI, docs, spec dentro del repo                                 | W0     | `chore(setup): scaffold nextjs + ts strict + tailwind + lint`         |
+| T2  | S3                                     | Migraciones, RLS, seed, repositorios, schemas zod                                         | W1     | `feat(db): esquema inicial + rls por rol`                             |
+| T3  | S5, S6, S7, S8, S9, S10, S11, S12, S13 | Dominio puro: glosario, modelo, reglas, factibilidad, solver                              | W2     | `feat(domain): modelo, glosario y reglas R1-R5`                       |
+| T4  | S1, S4                                 | Design system, PWA (manifest, iconos, service worker), shell                              | W3     | `feat(ui): tokens y primitivas base`                                  |
+| T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | `feat(auth): login con supabase y middleware de sesion`               |
+| T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | `feat(paso): wizard de seis pasos con reparto por trabajadera`        |
+| T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `feat(tramos): alta, renombre y borrado de tramos`                    |
+| T8  | S13, S17                               | Plan de relevos: API de cálculo, pantalla principal, estadísticas, versiones              | W7     | `feat(plan): pantalla principal con vistas por tramo y por costalero` |
+| T9  | S18, S19                               | Hoja por trabajadera, estilos de impresión A4, exportación CSV                            | W8     | `feat(hoja): vista por trabajadera con tabla de tramos y puestos`     |
+| T10 | S1, S4, S9–S13                         | E2E del flujo completo, offline, accesibilidad, performance                               | W9     | `test(e2e): flujo completo login a exportacion`                       |
+| T11 | S2, S3, S4                             | README, glosario publicado, modelo de datos, guía de relevos, manual del capataz, runbook | W10    | `docs(readme): guia de arranque del proyecto`                         |
+
+---
+
+## Log
+
+### L1 · Encargo original (verbatim)
+
+> como experto creador de promts vamos a crear uno para que se lo entregue a los agentes y podamos
+> iniciar de 0 un proyecto dedicado a los relevos de los costaleros de semana santa.
+>
+> La aplicacion quiero que se a una PWA totalmente funcional dedse moviles su principal propisito
+> aunque en algunas ocasiones alguien lo usara tambien desde un pc , su lenguaje de programacion
+> quiero que sea react o next.js si ves algo mejor indicarcelo tambien ira enlazado con una base
+> de datos de supabase , desde el principio puedes disponer de todos los datos que te hagan falta
+> quiero que desde el inicio ya se cuente con github y vercel para el proyecto ya que sera asi como
+> lo suba a la red para poder utilizarlo.
+>
+> ahora vamos a definir toda la nomenglatura que manejara el proyecto y la estructura que quiero que
+> tenga, empezamos con la nomenglatura :
+> costaleros son las personas que cargan el paso.
+> paso es la estrcutura la cual cargan los costaleros para llevar una imagen de semana santa, los
+> pasos constan debajo de el de trabajaderas.
+> trabajaderas son la parte principal de un paso ahi es donde los costaleros cargan los pasos
+> normalmente los pasos tienen entre 6 y 10 trabajaderas dependiendo de la longuitud del paso.
+>
+> ahora vamos a definir los puestos de los costaleros debajo de paso por su nomenglatura:
+> en cada trabajadera suelen ir 5 costaleros en la primera y la ultima trabajadera los costelaros de
+> nombran de la siguiente manera los dos exteriores son los pateros tanto el derecho como el
+> izquierdo a lado de los psteros van los fijadores que tambien hay 2 fijador derecho e izquierdo y
+> en el centro el corriente despues en las trabajaderas restantes todos se llaman igual menos los
+> pateros que pasan a llamerse costeros que tambien habra dos derecho e izquierdo.
+> el boquilla costalero que manda debajo del paso es el encargado de trasmitir las ordenes del
+> capataz a sus compañeros desde debajo del paso , por lo general debe haber 2 boquillas por paso
+>
+> ahora vamos a explicar la forma de realizar los relevos de los costaleros para que descanses
+> durante el recorrido, el recorrido desde la salida de la iglesia hasta la entrada de la iglesia
+> sera particionada en tramos en cada uno de los tramos saldran y entraran costaleros en las
+> diferentes trabajaderas para ir relevando a sus compañeros.
+> ahora vamos con las reglas que ha de cumplir la logica combinacional y aritmetica para que todos
+> los costaletos tengan el mismo descanso dentro de lo posible.
+> Primera regla sera que los costaleros de la primera trabadera solo podran cambiarse en los
+> relevos de los tramos por compañeros de su misma trabajadera siempre eso es incambiable.
+> segunda regla todos los costaleros deben salir al menos dos veces durante el recorrido.
+> tercera regla los costaleros no deben estar fuera dos relevos seguidos.
+> cuarta regla los dos boquillas no deben coincidir fuera del paso los dos a la vez.
+> quinta regla los costaleros que hagan la salida no deben hacer la entrada dentro de lo posible,
+> osea seria el primer tramo y el ultimo no deberian de repetir los mismo siempre y cuando se
+> pueda.
+>
+> ahora vamos a definir la estructura que quiero que tenga la aplicacion , empezaremos con una pagina
+> de login, despues de login empezara la creacion de la cuadrilla y del paso habra que definir
+> cuantos costaleros tendra el paso y cuantas trabajaderas tendra tambien ademas de luego definir
+> que cantidad de costeleros definidos en el paso iran en cada trabajadera.
+> despues de terminar con la creacion principal del paso pasaremos a definir cuantos tramos seran
+> necesarios para cada trabajadera para que cada costalero salga un minimo de 2 veces durante el
+> recorrido , ademas tambien tendremos que colocar un apartado para la creacion de los tramos y
+> asignales un nombre.
+>
+> y luegtendremos tambien la parte principal que sera el plan de relevos que ahi sera donde
+> apliquemos la logica combinacional para que los costaleros temga sus relevos los mas equitativos
+> posible y por ultimo temdremos una hoja para que el capataz vea visualmente como queda cada
+> trabajedra con todos los relevos ya realizados y por ultimo la exportacion de esos elevos para
+> que sean imprimidos y repartidos a los costaleros
+
+### L2 · Corrección del usuario sobre el alcance de la spec
+
+El usuario corrigió el enfoque: **la spec del archivo de texto es la única fuente de verdad**. No
+haber heredado reglas de dominio de proyectos anteriores del usuario, ni mencionarlos. Cualquier
+punto que el archivo no define queda como supuesto declarado (§16.1 de la spec) o como punto
+pendiente (§16.2), nunca se rellena con conocimiento externo.
+
+### L3 · Decisiones de arquitectura tomadas por el orquestador
+
+- **Next.js 15 App Router + TypeScript** sobre React/Vite (S2). Motivos en `docs/adr/0001-stack.md`.
+- **Solver propio en TypeScript puro**, en dos fases (backtracking con poda → simulated
+  annealing), determinista con semilla, sin dependencias nativas ni servicios externos, y con
+  diagnóstico de infactibilidad en vez de devolver un plan inválido.
+- **RLS verificado con PGlite**: en este entorno no hay Docker ni proyecto cloud de Supabase, y
+  las políticas se escriben contra `auth.uid()` para que sirvan tal cual en producción.
+
+### L4 · Estado de la infraestructura externa
+
+- GitHub: repositorio `cuadrillasoledadaya/relevos-costaleros` (privado) creado y enlazado como
+  `origin`. Falta activar la protección de `main` (se hace tras el primer push).
+- Vercel: proyecto `relevos-costaleros` (equipo `alarmdryros-7957s-projects`) creado, enlazado al
+  repo de GitHub y con deploy automático. **Faltan las variables de entorno** (dependen de S3).
+- Supabase: **proyecto cloud no creado**. El token disponible solo accede al proyecto `tienda`
+  (inactivo, sin API keys) y la creación de proyectos devuelve `Forbidden`; `supabase orgs list`
+  no devuelve organizaciones. Requiere una intervención del usuario. Ver T10 (E2E) y T8.
