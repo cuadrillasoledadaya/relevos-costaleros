@@ -284,3 +284,38 @@ pendiente (§16.2), nunca se rellena con conocimiento externo.
   (`prj_62aodSYTv6LfKEBGFqR7yyGHSf4E`, producción en `https://relevos-costaleros-nu.vercel.app`).
   El proyecto homónimo que se había creado por error en el equipo viejo se borró. El punto de L4
   sobre Vercel queda obsoleto; el resto de L4 sigue vigente.
+
+### L8 · Decisiones del usuario sobre dos desviaciones de §10 (2026-11-17)
+
+§10 es un contrato cerrado, así que las dos desviaciones las autorizó el usuario de forma
+explícita:
+
+1. **Una cuenta, una cuadrilla.** §10 no guarda el email en `costaleros` ni fija un índice único
+   sobre `profile_id`: la app lo comprobaba antes de insertar y dos altas simultáneas se colaban.
+   Decisión: **índice único parcial** `costaleros_profile_id_unico` sobre `profile_id` donde no es
+   nulo, con migración propia (`20250330000400`). Los costaleros sin cuenta (alta del capataz antes
+   del registro) siguen sin estar bloqueados. La app traduce el error `23505` al mensaje en español
+   en vez de filtrar el error de Postgres.
+2. **Los tramos de la línea de tiempo del costalero.** §10 le concede al costalero leer "solo
+   planes publicados de cuadrillas a las que pertenece, y de nada más", pero P8 necesita los
+   nombres y el orden de los tramos. Decisión: **se mantiene el proxy del servidor con el cliente
+   admin** y filtros exactos (`plan_id` + `costalero_id`), sin tocar las políticas de §10. El
+   contexto (plan y fila del costalero) sale del cliente del usuario con RLS, y el resultado se
+   filtra otra vez en el caller. Queda anotado como riesgo de seguridad para la revisión.
+
+### L9 · W4 entregada (T5)
+
+- Login con contraseña, enlace mágico y alta de cuenta con rol `costalero` por defecto; mensajes
+  de error en español; aviso de instalación en iOS. Middleware con refresh de sesión, protección de
+  rutas y logout. P2 de cuadrillas con alta, edición, borrado y gestión de costaleros. P8 con la
+  línea de tiempo personal del costalero.
+- **Verificado por el orquestador**: lint sin errores, typecheck limpio, **132 tests verdes** en 23
+  ficheros y build OK con 4 rutas dinámicas (`/cuadrillas`, `/cuadrillas/nueva`,
+  `/cuadrillas/[cuadrillaId]`, `/cuadrillas/[cuadrillaId]/mi-relevo`) y `/login`.
+- **Corrección del orquestador**: el build fallaba porque `/cuadrillas` se prerenderizaba y el
+  cliente de Supabase exige variables en tiempo de build (el CI compila sin ellas). El grupo
+  autenticado ahora es `force-dynamic`: las rutas dependen de la sesión y el build no necesita
+  variables de Supabase.
+- **Pendiente**: la verificación contra la nube (login real, alta de cuenta, logout, CRUD y P8) no
+  se puede hacer hasta que el proyecto cloud de Supabase tenga migraciones aplicadas y variables
+  cargadas. Las pruebas usan PGlite y dobles.
