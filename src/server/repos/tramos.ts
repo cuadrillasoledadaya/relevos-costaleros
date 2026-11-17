@@ -134,12 +134,15 @@ export function crearRepositorioTramos(
     /**
      * Reordena los tramos del paso con la función `reordenar_tramos`: el
      * cambio es atómico y recalcula los tipos canónicos del recorrido.
+     *
+     * Los nombres de los argumentos son los de la función (`p_paso_id`,
+     * `p_orden`): PostgREST busca la firma por sus argumentos.
      */
     reordenar(pasoId, orden) {
       return resultadoDeConsulta(
         client.rpc<Tramo[]>("reordenar_tramos", {
-          paso_id: pasoId,
-          orden,
+          p_paso_id: pasoId,
+          p_orden: orden,
         }),
       );
     },

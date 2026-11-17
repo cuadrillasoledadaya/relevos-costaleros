@@ -31,8 +31,8 @@ const FUNCIONES_PERMITIDAS: Record<
   Array<{ nombre: string; tipo: string }>
 > = {
   reordenar_tramos: [
-    { nombre: "paso_id", tipo: "uuid" },
-    { nombre: "orden", tipo: "uuid[]" },
+    { nombre: "p_paso_id", tipo: "uuid" },
+    { nombre: "p_orden", tipo: "uuid[]" },
   ],
   anexar_tramo: [
     { nombre: "p_paso_id", tipo: "uuid" },
