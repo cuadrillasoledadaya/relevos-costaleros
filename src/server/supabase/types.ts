@@ -53,9 +53,23 @@ export type SupabaseAuthClient = {
   }>;
 };
 
+/** Resultado de una llamada a una función de la base de datos (`rpc`). */
+export type RpcResult<T> = {
+  data: T | null;
+  error: DbError | null;
+};
+
 export interface SupabaseClientLike {
   auth: SupabaseAuthClient;
   from<T = unknown>(table: string): TableClient<T>;
+  /**
+   * Llama a una función de la base de datos (PostgREST `rpc`). La usa el
+   * repositorio de tramos para el reordenamiento transaccional.
+   */
+  rpc<T = unknown>(
+    fn: string,
+    args?: Record<string, unknown>,
+  ): PromiseLike<RpcResult<T>>;
 }
 
 export type CookieOptions = {
