@@ -298,7 +298,7 @@ export function evaluarFactibilidad(
         },
   );
 
-  // F-4 — `pool ≥ carga + 1` en toda trabajadera: al menos un suplente por working position.
+  // F-4 — `pool ≥ carga + 1` en toda trabajadera: al menos un suplente por trabajadera.
   const falloF4 = datos.find((dato) => dato.pool < dato.carga + 1);
   precondiciones.push(
     falloF4
