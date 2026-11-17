@@ -145,7 +145,7 @@ Objetivo blando EQ: minimizar la dispersión de descansos dentro de cada pool y 
 | T4  | S1, S4                                 | Design system, PWA (manifest, iconos, service worker), shell                              | W3     | `1612d61`                                                             | Hecha     |
 | T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | cadena de 7 PRs (#2 a #8) + `fix(db): indice unico parcial`           | Hecha     |
 | T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | cadena de 5 PRs (#9 a #13)                                            | Hecha     |
-| T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `feat(tramos): alta, renombre y borrado de tramos`                    | Pendiente |
+| T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `4b9e840`, `1b1dc2f`, `e531b18`, `c9dbec4`, `00b5053`                 | En curso  |
 | T8  | S13, S17                               | Plan de relevos: API de cálculo, pantalla principal, estadísticas, versiones              | W7     | `feat(plan): pantalla principal con vistas por tramo y por costalero` | Pendiente |
 | T9  | S18, S19                               | Hoja por trabajadera, estilos de impresión A4, exportación CSV                            | W8     | `feat(hoja): vista por trabajadera con tabla de tramos y puestos`     | Pendiente |
 | T10 | S1, S4, S9–S13                         | E2E del flujo completo, offline, accesibilidad, performance                               | W9     | `test(e2e): flujo completo login a exportacion`                       | Pendiente |
@@ -389,3 +389,40 @@ module" }`), así que **en el bundle** cualquier carga del cliente de Supabase l
 - **Cuentas de demostración**: `capataz@relevos.example` y `costalero-01@relevos.example`. La
   contraseña **no** está en el repositorio (es público): está en
   `~/.supabase-relevos-costaleros-cuentas` (600).
+
+### L13 · W6 (T7): el recorrido se reordena en una transacción
+
+- El briefing de W6 exige que el reordenamiento «sea transaccional». Con PostgREST no hay
+  transacciones de varias sentencias, así que la reordenación la hace una función de Postgres
+  (`reordenar_tramos`) y el alta y la baja tienen las suyas (`anexar_tramo` y `borrar_tramo`).
+  Las tres son SECURITY INVOKER: mandan las políticas de RLS de §10.
+- La función aparta los ordinales a un rango libre, escribe el orden nuevo 1..N (sin huecos ni
+  repetidos) y recalcula los tipos canónicos (el primero `salida`, el último `entrada`) en la
+  misma operación. El `unique (paso_id, ordinal)` de §10 no se toca: no hay columna nueva.
+- **Decisión del orquestador sobre los tipos**: los cambios de estructura (alta, baja y
+  reordenación) recalculan los tipos canónicos; el tipo que el capataz fuerza a mano se mantiene
+  hasta el siguiente cambio de estructura, y la UI avisa mientras el recorrido quede incoherente
+  (`avisosDeCoherencia`, en `src/domain/tramos.ts`).
+- **Superficie ampliada** respecto al briefing de W6: además de la pantalla y las server actions,
+  la unidad toca `src/server/repos/tramos.ts`, `src/server/supabase/types.ts` (el cliente necesita
+  `rpc`), el doble de PGlite y dos migraciones. Sin eso no hay reordenamiento atómico.
+- **Bug encontrado al verificar contra la nube**: PostgREST busca la función por el nombre de sus
+  argumentos. La función declara `p_paso_id`/`p_orden` y el repositorio mandaba `paso_id`/`orden`,
+  así que la llamada fallaba con «Could not find the function public.reordenar_tramos(orden,
+  paso_id)». PGlite no podía verlo (el doble resuelve por posición). Corregido y verificado contra
+  el proyecto cloud: reordenar al revés, volver al orden original y una lista que no coincide
+  (rechazada en español y sin tocar los datos).
+- Migraciones `20250330000500` y `20250330000600` aplicadas al proyecto cloud
+  `mrmdonbmmhurlpnicjbn` y las tres funciones comprobadas contra el PostgREST real.
+- **Permisos de las funciones (verificado en la nube)**: en Postgres una función nace con
+  `EXECUTE` para `PUBLIC`, y en Supabase las funciones nuevas reciben además un permiso explícito
+  para `anon` por los `default privileges` del proyecto. Con sólo el `grant` a `authenticated` y
+  `service_role`, cualquier visitante podía invocar las funciones de tramos (el RLS ya impedía que
+  tocaran datos ajenos, pero el permiso sobraba). Lo cierran dos migraciones: `20250330000700`
+  quita el de `PUBLIC` y `20250330000800` el de `anon`. Comprobado contra la nube: `anon` recibe
+  «permission denied», el capataz reordena y el costalero (autenticado pero no dueño) recibe «La
+  lista de tramos no coincide con los tramos guardados del paso.» sin tocar los datos.
+- **Ruta de T7**: la unidad se hizo inline (no hay dos unidades independientes ni señal de
+  backstop al empezar). Cuando el runtime señaló el backstop de contexto (151.976 tokens), la
+  pantalla P4 se delegó a un writer acotado, con superficies de edición derivadas por el
+  orquestador.

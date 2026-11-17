@@ -216,9 +216,13 @@ beforeEach(() => {
 });
 
 describe("W6 · pantalla de apartados de tramos", () => {
-  it("añade un tramo y lo muestra en la lista sin recargar la página", async () => {
+  it("añade un tramo, lo muestra en la lista y actualiza la factibilidad sin recargar la página", async () => {
     estado.tramos = tramosIniciales().slice(0, 2);
     render(<PantallaTramos {...crearProps(estado.tramos)} />);
+
+    expect(
+      screen.getByText("Faltan 2 tramos para que todos descansen 2 veces"),
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/Nombre del nuevo tramo/), {
       target: { value: "Vuelta a la plaza" },
@@ -233,6 +237,11 @@ describe("W6 · pantalla de apartados de tramos", () => {
       nombre: "Vuelta a la plaza",
     });
     expect(ordinales()).toEqual(["1", "2", "3"]);
+    expect(
+      await screen.findByText(
+        "Faltan 1 tramos para que todos descansen 2 veces",
+      ),
+    ).toBeInTheDocument();
     expect(router.refresh).toHaveBeenCalled();
   });
 
@@ -310,6 +319,17 @@ describe("W6 · pantalla de apartados de tramos", () => {
     ).toBeInTheDocument();
   });
 
+  it("con T = 2 muestra F-2 en rojo y explica cuántos tramos faltan", () => {
+    render(<PantallaTramos {...crearProps(tramosIniciales().slice(0, 2))} />);
+
+    expect(screen.getByText("F-2 · no cumple")).toBeInTheDocument();
+    const mensaje = screen.getByText(
+      "Faltan 2 tramos para que todos descansen 2 veces",
+    );
+    expect(mensaje).toHaveClass("text-danger");
+    expect(mensaje.closest('[role="alert"]')).toHaveClass("bg-danger-soft");
+  });
+
   it("permite forzar el tipo de un tramo y muestra los avisos de coherencia", async () => {
     render(<PantallaTramos {...crearProps()} />);
 
@@ -317,6 +337,7 @@ describe("W6 · pantalla de apartados de tramos", () => {
       target: { value: "normal" },
     });
 
+    expect(await screen.findByText("F-2 · no cumple")).toBeInTheDocument();
     expect(acciones.cambiarTipoTramo).toHaveBeenCalledWith({
       pasoId: PASO_ID,
       tramoId: TRAMO_SALIDA,
