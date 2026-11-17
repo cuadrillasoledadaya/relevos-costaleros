@@ -252,4 +252,58 @@ describe("contrato del schema", () => {
       ),
     ).toBe(true);
   });
+
+  it("impide que dos costaleros compartan la misma cuenta", async () => {
+    const cuenta = "40000000-0000-4000-8000-000000000001";
+    const capataz = "10000000-0000-4000-8000-000000000001";
+    const cuadrilla = "20000000-0000-4000-8000-000000000001";
+
+    await db.query(
+      `insert into auth.users (id, email, raw_user_meta_data)
+       values
+         ($1, 'capataz@example.test', '{}'::jsonb),
+         ($2, 'cuenta@example.test', '{}'::jsonb)
+       on conflict (id) do nothing`,
+      [capataz, cuenta],
+    );
+    await db.query(
+      `insert into profiles (id, full_name, role)
+       values
+         ($1, 'Capataz de prueba', 'capataz'),
+         ($2, 'Cuenta de prueba', 'costalero')
+       on conflict (id) do nothing`,
+      [capataz, cuenta],
+    );
+    await db.query(
+      `insert into cuadrillas (id, name, season, owner_id)
+       values ($1, 'Cuadrilla de prueba', 2025, $2)
+       on conflict (id) do nothing`,
+      [cuadrilla, capataz],
+    );
+
+    const insertar = async (fila: string): Promise<boolean> => {
+      try {
+        await db.query(
+          `insert into costaleros (id, profile_id, cuadrilla_id, full_name)
+           values ($1, $2, $3, 'Costalero duplicado')`,
+          [fila, cuenta, cuadrilla],
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    expect(await insertar("91000000-0000-4000-8000-000000000001")).toBe(true);
+    expect(await insertar("91000000-0000-4000-8000-000000000002")).toBe(false);
+
+    // Un costalero sin cuenta puede repetirse: profile_id es nulo.
+    const sinCuenta = await db.query<{ id: string }>(
+      `insert into costaleros (id, profile_id, cuadrilla_id, full_name)
+       values ('91000000-0000-4000-8000-000000000003', null, $1, 'Sin cuenta')
+       returning id`,
+      [cuadrilla],
+    );
+    expect(sinCuenta.rows).toHaveLength(1);
+  });
 });
