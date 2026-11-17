@@ -103,10 +103,60 @@ describe("RLS de Supabase emulado con PGlite", () => {
     );
 
     expect(costaleros.rows).toEqual([
-      { id: IDS.costaleroA, full_name: "Costalero A" },
+      { id: IDS.filaCostaleroA, full_name: "Costalero A" },
     ]);
-    expect(costaleros.rows.some((fila) => fila.id === IDS.costaleroB)).toBe(
+    expect(costaleros.rows.some((fila) => fila.id === IDS.filaCostaleroB)).toBe(
       false,
     );
+    expect(costaleros.rows.some((fila) => fila.id === IDS.filaCostaleroC)).toBe(
+      false,
+    );
+  });
+
+  it("resuelve la pertenencia con costaleros.profile_id y no con el id de la fila", async () => {
+    await db.query(
+      `insert into planes (id, paso_id, version, status, seed, solver_version, created_by)
+       values ($1, $2, 1, 'publicado', 20250330, '1.0.0', $3)`,
+      [IDS.planPublicado, IDS.pasoA, IDS.capatazA],
+    );
+
+    // La identidad es la cuenta (IDS.costaleroA); la fila del costalero tiene
+    // otro id (IDS.filaCostaleroA). El plan publicado tiene que verse igual.
+    await establecerActor(db, "authenticated", IDS.costaleroA);
+    const planes = await db.query<{ id: string }>(`select id from planes`);
+
+    expect(planes.rows).toEqual([{ id: IDS.planPublicado }]);
+  });
+
+  it("no da acceso a nadie a un costalero sin cuenta", async () => {
+    await db.query(
+      `insert into planes (id, paso_id, version, status, seed, solver_version, created_by)
+       values ($1, $2, 1, 'publicado', 20250330, '1.0.0', $3)`,
+      [IDS.planPublicado, IDS.pasoA, IDS.capatazA],
+    );
+
+    // El costalero C no tiene profile_id: su id de fila no es una identidad.
+    await establecerActor(db, "authenticated", IDS.filaCostaleroC);
+    const planes = await db.query<{ id: string }>(`select id from planes`);
+    const costaleros = await db.query<{ id: string }>(
+      `select id from costaleros`,
+    );
+
+    expect(planes.rows).toEqual([]);
+    expect(costaleros.rows).toEqual([]);
+  });
+
+  it("permite al capataz dar de alta un costalero antes de que tenga cuenta", async () => {
+    await establecerActor(db, "authenticated", IDS.capatazA);
+
+    const creado = await db.query<{ id: string; profile_id: string | null }>(
+      `insert into costaleros (cuadrilla_id, full_name)
+       values ($1, 'Costalero recien dado de alta')
+       returning id, profile_id`,
+      [IDS.cuadrillaA],
+    );
+
+    expect(creado.rows).toHaveLength(1);
+    expect(creado.rows[0]?.profile_id).toBeNull();
   });
 });

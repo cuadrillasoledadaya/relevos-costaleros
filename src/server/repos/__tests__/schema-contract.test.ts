@@ -10,6 +10,13 @@ const RAIZ_REPOSITORIO = path.resolve(
   "../../../..",
 );
 
+/** Orden por nombre estable, sin depender de la collation ni del locale. */
+function porNombre(a: readonly string[], b: readonly string[]): number {
+  if (a[0]! < b[0]!) return -1;
+  if (a[0]! > b[0]!) return 1;
+  return 0;
+}
+
 const COLUMNAS_ESPERADAS: Record<string, Array<[string, string, string]>> = {
   profiles: [
     ["id", "uuid", "NO"],
@@ -29,6 +36,7 @@ const COLUMNAS_ESPERADAS: Record<string, Array<[string, string, string]>> = {
   costaleros: [
     ["id", "uuid", "NO"],
     ["cuadrilla_id", "uuid", "NO"],
+    ["profile_id", "uuid", "YES"],
     ["full_name", "text", "NO"],
     ["nickname", "text", "YES"],
     ["phone", "text", "YES"],
@@ -113,18 +121,17 @@ describe("contrato del schema", () => {
       }>(
         `select column_name, data_type, is_nullable
            from information_schema.columns
-          where table_schema = 'public' and table_name = $1
-          order by ordinal_position`,
+          where table_schema = 'public' and table_name = $1`,
         [tabla],
       );
 
+      // El contrato es el conjunto de columnas, no su posición física: una
+      // migración que añade una columna la deja al final.
       expect(
-        columnas.rows.map((fila) => [
-          fila.column_name,
-          fila.data_type,
-          fila.is_nullable,
-        ]),
-      ).toEqual(esperadas);
+        columnas.rows
+          .map((fila) => [fila.column_name, fila.data_type, fila.is_nullable])
+          .sort(porNombre),
+      ).toEqual([...esperadas].sort(porNombre));
     }
   });
 
@@ -221,7 +228,12 @@ describe("contrato del schema", () => {
       .filter((item) => item.constraint_type === "f")
       .map((item) => item.definition)
       .sort();
-    expect(foreignKeys).toHaveLength(13);
+    expect(foreignKeys).toHaveLength(14);
+    expect(
+      foreignKeys.some((definition) =>
+        definition.includes("FOREIGN KEY (profile_id) REFERENCES profiles(id)"),
+      ),
+    ).toBe(true);
     expect(
       foreignKeys.some((definition) =>
         definition.includes("FOREIGN KEY (owner_id) REFERENCES profiles(id)"),

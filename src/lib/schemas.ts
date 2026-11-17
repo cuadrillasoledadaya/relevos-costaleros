@@ -230,6 +230,10 @@ export const cuadrillaSchema = objeto({
 
 export const costaleroSchema = objeto({
   cuadrilla_id: texto({ uuid: true }),
+  // Ancla de pertenencia (§10): referencia a la cuenta del costalero. Es
+  // nullable porque el capataz puede dar de alta a un costalero antes de que
+  // esa persona tenga cuenta.
+  profile_id: opcional(nullable(texto({ uuid: true }))),
   full_name: texto({ min: 1 }),
   nickname: opcional(nullable(texto())),
   phone: opcional(nullable(texto())),
@@ -298,6 +302,7 @@ export const cuadrillaActualizacionSchema = objeto({
 
 export const costaleroActualizacionSchema = objeto({
   cuadrilla_id: opcional(texto({ uuid: true })),
+  profile_id: opcional(nullable(texto({ uuid: true }))),
   full_name: opcional(texto({ min: 1 })),
   nickname: opcional(nullable(texto())),
   phone: opcional(nullable(texto())),

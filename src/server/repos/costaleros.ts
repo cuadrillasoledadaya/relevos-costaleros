@@ -16,6 +16,8 @@ import {
 export type Costalero = {
   id: string;
   cuadrilla_id: string;
+  /** Cuenta del costalero (§10). Null mientras no tenga cuenta propia. */
+  profile_id: string | null;
   full_name: string;
   nickname: string | null;
   phone: string | null;

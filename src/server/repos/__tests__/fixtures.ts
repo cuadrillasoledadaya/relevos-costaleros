@@ -7,9 +7,15 @@ export const IDS = {
   cuadrillaB: "20000000-0000-4000-8000-000000000002",
   pasoA: "30000000-0000-4000-8000-000000000001",
   pasoB: "30000000-0000-4000-8000-000000000002",
+  // Identidad de la cuenta (auth.users / profiles) del costalero.
   costaleroA: "40000000-0000-4000-8000-000000000001",
   costaleroB: "40000000-0000-4000-8000-000000000002",
   costaleroC: "40000000-0000-4000-8000-000000000003",
+  // Identidad de la FILA en costaleros. Es distinta de la cuenta a propósito:
+  // §10 ancla la pertenencia en costaleros.profile_id, no en costaleros.id.
+  filaCostaleroA: "90000000-0000-4000-8000-000000000001",
+  filaCostaleroB: "90000000-0000-4000-8000-000000000002",
+  filaCostaleroC: "90000000-0000-4000-8000-000000000003",
   trabajaderaA: "50000000-0000-4000-8000-000000000001",
   tramoA: "60000000-0000-4000-8000-000000000001",
   planBorrador: "70000000-0000-4000-8000-000000000001",
@@ -70,16 +76,19 @@ export async function crearFixturesBasicos(db: PGlite): Promise<void> {
 
   await db.query(
     `
-      insert into costaleros (id, cuadrilla_id, full_name)
+      insert into costaleros (id, profile_id, cuadrilla_id, full_name)
       values
-        ($1, $4, 'Costalero A'),
-        ($2, $4, 'Costalero B'),
-        ($3, $5, 'Costalero C')
+        ($1, $4, $6, 'Costalero A'),
+        ($2, $5, $6, 'Costalero B'),
+        -- El costalero C todavia no tiene cuenta: lo dio de alta el capataz.
+        ($3, null, $7, 'Costalero C')
     `,
     [
+      IDS.filaCostaleroA,
+      IDS.filaCostaleroB,
+      IDS.filaCostaleroC,
       IDS.costaleroA,
       IDS.costaleroB,
-      IDS.costaleroC,
       IDS.cuadrillaA,
       IDS.cuadrillaB,
     ],

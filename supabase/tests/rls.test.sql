@@ -1,6 +1,6 @@
 begin;
 
-select plan(22);
+select plan(23);
 
 -- Contrato de tablas e índices de §10.
 select has_table('public', 'profiles', 'profiles existe');
@@ -45,10 +45,14 @@ values
   ('20000000-0000-4000-8000-000000000001', 'Cuadrilla A', 2025, '10000000-0000-4000-8000-000000000001'),
   ('20000000-0000-4000-8000-000000000002', 'Cuadrilla B', 2025, '10000000-0000-4000-8000-000000000002');
 
-insert into costaleros (id, cuadrilla_id, full_name)
+-- El id de la fila del costalero es distinto del id de su cuenta: la
+-- pertenencia la resuelve costaleros.profile_id (§10). El costalero C no tiene
+-- cuenta todavia.
+insert into costaleros (id, profile_id, cuadrilla_id, full_name)
 values
-  ('40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'Costalero A'),
-  ('40000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'Costalero B');
+  ('90000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'Costalero A'),
+  ('90000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'Costalero B'),
+  ('90000000-0000-4000-8000-000000000003', null, '20000000-0000-4000-8000-000000000001', 'Costalero C');
 
 insert into pasos (id, cuadrilla_id, name, season, num_trabajaderas)
 values (
@@ -101,9 +105,24 @@ select is(
   'el costalero lee el plan publicado de su cuadrilla'
 );
 select is(
-  (select count(*)::text from costaleros where id = '40000000-0000-4000-8000-000000000002'),
+  (select count(*)::text from costaleros where id = '90000000-0000-4000-8000-000000000002'),
   '0',
   'el costalero no lee datos de otro costalero'
+);
+
+reset role;
+-- El costalero C no tiene cuenta: su id de fila no es una identidad.
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"90000000-0000-4000-8000-000000000003"}',
+  true
+);
+set local role authenticated;
+
+select is(
+  (select count(*)::text from planes where status = 'publicado'),
+  '0',
+  'un costalero sin cuenta no lee el plan publicado'
 );
 
 reset role;
