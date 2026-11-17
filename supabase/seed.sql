@@ -6,23 +6,97 @@
 -- de alta a un costalero antes de que esa persona tenga cuenta, y esa fila queda
 -- con `profile_id` nulo hasta que se registre.
 
-insert into auth.users (id, email, raw_user_meta_data)
+-- Las cuentas del seed son usuarios REALES de Supabase Auth: sin instance_id,
+-- aud y role, GoTrue no las ve (la API de administración devuelve una lista
+-- vacia) y no se puede iniciar sesion con ellas. El instance_id de Supabase es
+-- el UUID estandar de todos ceros. La contrasena NO va en el seed (el
+-- repositorio es publico): se fija despues por la API de administracion.
+insert into auth.users (
+  id,
+  email,
+  raw_user_meta_data,
+  raw_app_meta_data,
+  instance_id,
+  aud,
+  role,
+  email_confirmed_at,
+  confirmation_token,
+  recovery_token,
+  email_change_token_new,
+  email_change,
+  phone_change_token,
+  phone_change,
+  reauthentication_token,
+  email_change_token_current,
+  email_change_confirm_status,
+  created_at,
+  updated_at
+)
 values
-  ('a0000000-0000-4000-8000-000000000001', 'capataz@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000001', 'costalero-01@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000002', 'costalero-02@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000003', 'costalero-03@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000004', 'costalero-04@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000005', 'costalero-05@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000006', 'costalero-06@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000007', 'costalero-07@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000008', 'costalero-08@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000009', 'costalero-09@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000010', 'costalero-10@relevos.example', '{}'::jsonb),
-  ('c0000000-0000-4000-8000-000000000011', 'costalero-11@relevos.example', '{}'::jsonb)
+  ('a0000000-0000-4000-8000-000000000001', 'capataz@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000001', 'costalero-01@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000002', 'costalero-02@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000003', 'costalero-03@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000004', 'costalero-04@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000005', 'costalero-05@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000006', 'costalero-06@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000007', 'costalero-07@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000008', 'costalero-08@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000009', 'costalero-09@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000010', 'costalero-10@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now()),
+  ('c0000000-0000-4000-8000-000000000011', 'costalero-11@relevos.example', '{}'::jsonb, '{"provider": "email", "providers": ["email"]}'::jsonb, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', now(), '', '', '', '', '', '', '', '', 0, now(), now())
 on conflict (id) do update
 set email = excluded.email,
-    raw_user_meta_data = excluded.raw_user_meta_data;
+    raw_user_meta_data = excluded.raw_user_meta_data,
+    raw_app_meta_data = excluded.raw_app_meta_data,
+    instance_id = excluded.instance_id,
+    aud = excluded.aud,
+    role = excluded.role,
+    email_confirmed_at = excluded.email_confirmed_at,
+    confirmation_token = excluded.confirmation_token,
+    recovery_token = excluded.recovery_token,
+    email_change_token_new = excluded.email_change_token_new,
+    email_change = excluded.email_change,
+    phone_change_token = excluded.phone_change_token,
+    phone_change = excluded.phone_change,
+    reauthentication_token = excluded.reauthentication_token,
+    email_change_token_current = excluded.email_change_token_current,
+    email_change_confirm_status = excluded.email_change_confirm_status,
+    created_at = excluded.created_at,
+    updated_at = excluded.updated_at;
+
+-- GoTrue espera una identidad por cuenta: sin fila en auth.identities la
+-- cuenta existe pero no se puede autenticar (error 500 "Database error
+-- querying schema" al iniciar sesion).
+insert into auth.identities (
+  id,
+  user_id,
+  provider_id,
+  identity_data,
+  provider,
+  last_sign_in_at,
+  created_at,
+  updated_at
+)
+select
+  u.id,
+  u.id,
+  u.id,
+  jsonb_build_object(
+    'sub', u.id,
+    'email', u.email,
+    'email_verified', true,
+    'phone_verified', false
+  ),
+  'email',
+  now(),
+  now(),
+  now()
+from auth.users u
+where u.email like '%@relevos.example'
+on conflict (provider_id, provider) do update
+set identity_data = excluded.identity_data,
+    updated_at = now();
 
 insert into profiles (id, full_name, role)
 values

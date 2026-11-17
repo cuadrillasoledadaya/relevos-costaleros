@@ -94,4 +94,39 @@ describe("seed de demostración", () => {
       { ordinal: 4, kind: "entrada" },
     ]);
   });
+
+  it("crea cuentas de Supabase Auth reales, con identidad y tokens vacios", async () => {
+    // GoTrue es estricto: sin instance_id, aud y role no ve la cuenta; sin
+    // fila en auth.identities ni con las columnas de token a '' (no NULL) el
+    // login devuelve 500 "Database error querying schema". El seed tiene que
+    // dejar las cuentas en la forma que GoTrue espera.
+    const cuentas = await db.query<{
+      total: string;
+      con_instance: string;
+      con_aud: string;
+      tokens_nullos: string;
+    }>(`
+      select
+        count(*)::text as total,
+        count(*) filter (where instance_id is not null)::text as con_instance,
+        count(*) filter (where aud = 'authenticated' and role = 'authenticated')::text as con_aud,
+        count(*) filter (
+          where confirmation_token is null
+             or recovery_token is null
+             or email_change_token_current is null
+             or reauthentication_token is null
+        )::text as tokens_nullos
+      from auth.users
+    `);
+
+    expect(cuentas.rows[0]?.total).toBe("12");
+    expect(cuentas.rows[0]?.con_instance).toBe("12");
+    expect(cuentas.rows[0]?.con_aud).toBe("12");
+    expect(cuentas.rows[0]?.tokens_nullos).toBe("0");
+
+    const identidades = await db.query<{ total: string }>(
+      `select count(*)::text as total from auth.identities`,
+    );
+    expect(identidades.rows[0]?.total).toBe("12");
+  });
 });
