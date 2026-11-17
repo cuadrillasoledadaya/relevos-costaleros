@@ -338,3 +338,26 @@ explícita:
 - W5 no borra ni reordena tramos (eso es W6): crea los que faltan, renombra los existentes y avisa
   de los que quedan fuera de la propuesta.
 - Verificado por el orquestador: lint, typecheck, suite completa y build en verde.
+
+### L11 · El bundle rompía el cliente de Supabase (bug encontrado al desplegar)
+
+- **Síntoma**: en producción, `/cuadrillas` respondía `307 → /login?error=configuracion` y el
+  middleware nunca veía una sesión. La causa no era la configuración: `src/server/supabase/loader.ts`
+  pedía el módulo con `import(especificacion)`, es decir, con una **variable**. Webpack no puede
+  analizar esa llamada y la compila a un contexto vacío (`321: a => { ... throw "Cannot find
+module" }`), así que **en el bundle** cualquier carga del cliente de Supabase lanzaba
+  "Cannot find module '@supabase/ssr'". En los tests (vitest no empaqueta) el import dinámico
+  nativo sí funcionaba, y los tests de W1 usaban un cliente falso: el fallo sólo aparecía al
+  empaquetar.
+- **Corrección**: el especificador va literal en cada rama (`import("@supabase/ssr")` /
+  `import("@supabase/supabase-js")`), que es lo que webpack sabe empaquetar. Se añade un test que
+  fija el requisito (además del funcional) para que no vuelva: `src/server/supabase/__tests__/loader.test.ts`.
+- **Cómo se detectó**: el despliegue de Vercel devolvía 404 en todas las rutas porque el proyecto
+  tenía `framework: None` (Vercel publicaba sólo `public/`). Corregido a `nextjs` por la API
+  (`PATCH /v9/projects/<id>` con `teamId`), y entonces ya se vio el `error=configuracion`.
+- **Verificado**: build local sin avisos de "Critical dependency"; `/cuadrillas` sin sesión
+  responde `307 → /login?returnTo=/cuadrillas` (el middleware llega a Supabase y no hay sesión),
+  que es el comportamiento correcto.
+- **Entorno**: el proyecto cloud de Supabase es `mrmdonbmmhurlpnicjbn`, región **eu-central-1**,
+  pooler `aws-0-eu-central-1.pooler.supabase.com` (modo transacción). Esta máquina no tiene IPv6
+  global, así que el host directo `db.<ref>.supabase.co` no sirve.
