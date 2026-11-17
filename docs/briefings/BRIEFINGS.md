@@ -684,7 +684,10 @@ CONTRATOS (leer, no modificar)
 CRITERIOS DE ACEPTACIÓN (verificables)
   - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` en verde.
   - Con 3 trabajaderas y 18 costaleros (pool 6 por trabajadera, carga 5), el paso 5 propone
-    `T = 4` y muestra el detalle por trabajadera.
+    `T = 12` y muestra el detalle por trabajadera. Ojo: el criterio decía antes `T = 4`, que
+    contradecía §7.3 (`ceil(2·pool/r)` con `r = pool − carga` da 12 para pool 6 y carga 5) y los
+    tests de W2. Con `T = 4` la precondición F-2 fallaría (`T·r = 4 < 2·pool = 12`). El caso que
+    sí da `T = 4` es pool 10 con carga 5.
   - Con una trabajadera de pool 5 y carga 5, el checklist muestra F-1 en rojo con el mensaje
     "la trabajadera N no tiene suplentes" y el botón de calcular queda deshabilitado.
   - Con una cuadrilla de 10 costaleros, el paso 3 muestra el puesto correcto de cada uno
