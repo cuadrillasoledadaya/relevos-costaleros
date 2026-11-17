@@ -39,6 +39,11 @@ const FUNCIONES_PERMITIDAS: Record<
     { nombre: "p_nombre", tipo: "text" },
   ],
   borrar_tramo: [{ nombre: "p_tramo_id", tipo: "uuid" }],
+  actualizar_tramo: [
+    { nombre: "p_tramo_id", tipo: "uuid" },
+    { nombre: "p_nombre", tipo: "text" },
+    { nombre: "p_tipo", tipo: "text" },
+  ],
 };
 
 function errorPglite(error: unknown): DbError {

@@ -29,6 +29,14 @@ export type RepositorioTramos = {
     id: string,
     cambios: TramoActualizacionInput,
   ): Promise<ResultadoRepositorio<Tramo>>;
+  /**
+   * Actualiza el nombre y/o el tipo de un tramo y devuelve el recorrido
+   * completo en una sola transacción.
+   */
+  actualizarEnRecorrido(
+    id: string,
+    cambios: { name?: string; kind?: "salida" | "normal" | "entrada" },
+  ): Promise<ResultadoListaRepositorio<Tramo>>;
   eliminar(id: string): Promise<ResultadoListaRepositorio<Tramo>>;
   /**
    * Añade un tramo al final del recorrido (en una sola transacción) y
@@ -105,6 +113,24 @@ export function crearRepositorioTramos(
           .eq("id", id)
           .select("*")
           .maybeSingle(),
+      );
+    },
+
+    /**
+     * Actualiza un tramo y lee el recorrido completo en la misma transacción.
+     * El tipo forzado a mano se conserva: sólo los cambios estructurales
+     * recalculan los tipos canónicos.
+     *
+     * Los nombres de los argumentos son los de la función (`p_tramo_id`,
+     * `p_nombre`, `p_tipo`): PostgREST busca la firma por sus argumentos.
+     */
+    actualizarEnRecorrido(id, cambios) {
+      return resultadoDeConsulta(
+        client.rpc<Tramo[]>("actualizar_tramo", {
+          p_tramo_id: id,
+          p_nombre: cambios.name ?? null,
+          p_tipo: cambios.kind ?? null,
+        }),
       );
     },
 

@@ -1,7 +1,8 @@
 import { BotonReintentar } from "@/components/features/configuracion/BotonReintentar";
+import { cargarSesion } from "@/components/features/cuadrillas/sesion";
 import { PantallaTramos } from "@/components/features/tramos/PantallaTramos";
 import type { DatosPantallaTramos } from "@/components/features/tramos/tipos";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { Alert, EmptyState } from "@/components/ui";
 import { avisosDeCoherencia } from "@/domain/tramos";
 import { crearRepositorioAsignaciones } from "@/server/repos/asignaciones";
 import { crearRepositorioPasos } from "@/server/repos/pasos";
@@ -22,6 +23,22 @@ export default async function PageTramos({
   params: Promise<{ cuadrillaId: string; pasoId: string }>;
 }) {
   const { cuadrillaId, pasoId } = await params;
+
+  const sesion = await cargarSesion();
+  if (!sesion) {
+    return (
+      <Alert tone="danger" title="Sesión no válida">
+        Vuelve a entrar para continuar.
+      </Alert>
+    );
+  }
+  if (sesion.perfil?.role !== "capataz") {
+    return (
+      <Alert tone="warning" title="Sin permisos">
+        Tu cuenta de costalero no puede gestionar los tramos.
+      </Alert>
+    );
+  }
 
   let datos: DatosPantallaTramos;
 

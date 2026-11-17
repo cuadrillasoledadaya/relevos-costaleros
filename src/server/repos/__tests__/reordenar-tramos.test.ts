@@ -213,4 +213,96 @@ describe("reordenación transaccional de los tramos", () => {
     );
     expect(guardado.rows[0]?.total).toBe("2");
   });
+
+  it("recalcula todos los tipos canónicos al añadir un tramo", async () => {
+    const repos = crearRepositorioTramos(client);
+    const tipos: Array<"salida" | "normal" | "entrada"> = [
+      "normal",
+      "normal",
+      "entrada",
+    ];
+
+    for (const [indice, kind] of tipos.entries()) {
+      const creado = await repos.crear({
+        paso_id: IDS.pasoA,
+        name: `Tramo ${String(indice + 1)}`,
+        ordinal: indice + 1,
+        kind,
+      });
+      expect(creado.error).toBeNull();
+    }
+
+    const resultado = await repos.anexar(IDS.pasoA, "Vuelta a la plaza");
+
+    expect(resultado.error).toBeNull();
+    expect(resultado.data.map((tramo) => tramo.kind)).toEqual([
+      "salida",
+      "normal",
+      "normal",
+      "entrada",
+    ]);
+  });
+
+  it("deshace el alta completa si falla la fase final de tipos", async () => {
+    const repos = crearRepositorioTramos(client);
+    const tipos: Array<"salida" | "normal" | "entrada"> = [
+      "normal",
+      "normal",
+      "entrada",
+    ];
+
+    for (const [indice, kind] of tipos.entries()) {
+      const creado = await repos.crear({
+        paso_id: IDS.pasoA,
+        name: `Tramo ${String(indice + 1)}`,
+        ordinal: indice + 1,
+        kind,
+      });
+      expect(creado.error).toBeNull();
+    }
+
+    const antes = await db.query<{ fila: string }>(
+      `select row_to_json(t)::text as fila
+         from public.tramos t
+        where t.paso_id = $1
+        order by t.ordinal`,
+      [IDS.pasoA],
+    );
+
+    await restaurarRol(db);
+    await db.exec(`
+      create function public.fallar_en_la_fase_de_tipos()
+      returns trigger
+      language plpgsql
+      as $$
+      begin
+        if new.ordinal = 1
+           and new.kind = 'salida'
+           and old.kind is distinct from 'salida' then
+          raise exception 'Fallo inyectado en la fase de tipos.';
+        end if;
+        return new;
+      end;
+      $$;
+
+      create trigger fallar_en_la_fase_de_tipos
+      before update of kind on public.tramos
+      for each row
+      execute function public.fallar_en_la_fase_de_tipos();
+    `);
+    await establecerActor(db, "authenticated", IDS.capatazA);
+
+    const resultado = await repos.anexar(IDS.pasoA, "Vuelta a la plaza");
+
+    expect(resultado.error).not.toBeNull();
+    await restaurarRol(db);
+    const despues = await db.query<{ fila: string }>(
+      `select row_to_json(t)::text as fila
+         from public.tramos t
+        where t.paso_id = $1
+        order by t.ordinal`,
+      [IDS.pasoA],
+    );
+    expect(despues.rows).toEqual(antes.rows);
+  });
 });

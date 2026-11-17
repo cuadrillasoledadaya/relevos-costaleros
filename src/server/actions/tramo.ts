@@ -195,23 +195,19 @@ export async function renombrarTramo(
     return { ok: false, error: pertenencia.error };
   }
 
-  const actualizado = await repositorios.actualizar(validacion.data.tramoId, {
-    name: validacion.data.nombre,
-  });
-  if (actualizado.error) {
-    return { ok: false, error: actualizado.error.message };
-  }
-
-  const listado = await repositorios.listarPorPaso(validacion.data.pasoId);
-  if (listado.error) {
-    return { ok: false, error: listado.error.message };
+  const resultado = await repositorios.actualizarEnRecorrido(
+    validacion.data.tramoId,
+    { name: validacion.data.nombre },
+  );
+  if (resultado.error) {
+    return { ok: false, error: resultado.error.message };
   }
 
   revalidarPantallaTramos();
   return {
     ok: true,
     mensaje: `Tramo «${validacion.data.nombre}» renombrado.`,
-    datos: datosDeTramos(listado.data),
+    datos: datosDeTramos(resultado.data),
   };
 }
 
@@ -328,20 +324,16 @@ export async function cambiarTipoTramo(
     return { ok: false, error: pertenencia.error };
   }
 
-  const actualizado = await repositorios.actualizar(validacion.data.tramoId, {
-    kind: validacion.data.tipo,
-  });
-  if (actualizado.error) {
-    return { ok: false, error: actualizado.error.message };
-  }
-
-  const listado = await repositorios.listarPorPaso(validacion.data.pasoId);
-  if (listado.error) {
-    return { ok: false, error: listado.error.message };
+  const resultado = await repositorios.actualizarEnRecorrido(
+    validacion.data.tramoId,
+    { kind: validacion.data.tipo },
+  );
+  if (resultado.error) {
+    return { ok: false, error: resultado.error.message };
   }
 
   revalidarPantallaTramos();
-  const datos = datosDeTramos(listado.data);
+  const datos = datosDeTramos(resultado.data);
   const parte =
     datos.avisos.length > 0 ? " Revisa los avisos del recorrido." : "";
   return {
