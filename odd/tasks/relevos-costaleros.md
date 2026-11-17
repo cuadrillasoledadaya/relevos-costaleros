@@ -361,3 +361,31 @@ module" }`), así que **en el bundle** cualquier carga del cliente de Supabase l
 - **Entorno**: el proyecto cloud de Supabase es `mrmdonbmmhurlpnicjbn`, región **eu-central-1**,
   pooler `aws-0-eu-central-1.pooler.supabase.com` (modo transacción). Esta máquina no tiene IPv6
   global, así que el host directo `db.<ref>.supabase.co` no sirve.
+
+### L12 · Verificación contra la nube real (Supabase + Vercel)
+
+- **Infra**: migraciones (las cuatro) y seed aplicados en el proyecto cloud. Las nueve tablas de §10
+  existen, RLS activo en las nueve, 13 políticas, el índice único parcial de `profile_id` presente.
+  Seed: 1 cuadrilla, 1 paso, 3 trabajaderas (pool 4 / carga 2), 12 costaleros repartidos, 2
+  boquillas, 4 tramos (salida, normal, normal, entrada) y 1 costalero sin cuenta. F-1..F-4 se
+  cumplen.
+- **RLS verificado contra la nube** (con las cuentas de demostración y sus tokens reales):
+  `anon` no ve nada; el **costalero** ve sólo su propia fila de `costaleros` y ningún plan en
+  borrador; cuando el capataz publica un plan, el costalero ve **sólo el publicado**; el costalero
+  **no puede escribir** planes (403, "new row violates row-level security policy"); el capataz ve
+  su cuadrilla y sus 12 costaleros y puede escribir.
+- **Sesión real contra la app en producción** (`https://relevos-costaleros-nu.vercel.app`): con la
+  cookie de sesión de `@supabase/ssr`, el capataz carga `/cuadrillas` y el detalle de su cuadrilla
+  (200), y el costalero carga `/mi-relevo` (200). Antes de corregir el bug del bundle, todo
+  redirigía a `/login?error=configuracion`.
+- **Seed corregido (T2)**: las cuentas del seed son usuarios reales de GoTrue. Hacen falta
+  `instance_id`, `aud` y `role`; las columnas de token a `''` (a NULL el login devuelve 500
+  "Database error querying schema"); y una fila en `auth.identities` por cuenta. La emulación de
+  PGlite replica ahora el esquema de `auth` que necesita el seed, y un test nuevo fija el
+  requisito.
+- **Variables de entorno**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y
+  `SUPABASE_SERVICE_ROLE_KEY` (esta última como _Secret_) en los tres entornos de Vercel. Los
+  valores viven en `~/.supabase-relevos-costaleros-password` y `.env.local` (ignorado por git).
+- **Cuentas de demostración**: `capataz@relevos.example` y `costalero-01@relevos.example`. La
+  contraseña **no** está en el repositorio (es público): está en
+  `~/.supabase-relevos-costaleros-cuentas` (600).
