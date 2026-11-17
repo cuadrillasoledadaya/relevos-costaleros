@@ -1,6 +1,6 @@
 begin;
 
-select plan(23);
+select plan(24);
 
 -- Contrato de tablas e índices de §10.
 select has_table('public', 'profiles', 'profiles existe');
@@ -18,6 +18,7 @@ select has_index('public', 'trabajaderas', 'trabajaderas_paso_id_idx', 'índice 
 select has_index('public', 'asignaciones', 'asignaciones_costalero_id_idx', 'índice de asignaciones');
 select has_index('public', 'tramos', 'tramos_paso_id_ordinal_idx', 'índice de tramos');
 select has_index('public', 'relevos', 'relevos_plan_id_tramo_id_idx', 'índice de relevos');
+select has_index('public', 'costaleros', 'costaleros_profile_id_unico', 'índice único de la cuenta del costalero');
 
 select col_type_is('public', 'profiles', 'role', 'text', 'profiles.role es texto');
 select col_type_is('public', 'planes', 'seed', 'bigint', 'planes.seed es bigint');

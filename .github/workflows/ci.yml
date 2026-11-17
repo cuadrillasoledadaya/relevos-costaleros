@@ -3,8 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+  # La entrega va en cadena: cada PR se apoya en el anterior, asi que los
+  # checks tienen que correr tambien con una base que no sea main.
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
