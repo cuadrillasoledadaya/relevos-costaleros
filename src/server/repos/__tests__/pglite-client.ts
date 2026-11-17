@@ -34,6 +34,11 @@ const FUNCIONES_PERMITIDAS: Record<
     { nombre: "paso_id", tipo: "uuid" },
     { nombre: "orden", tipo: "uuid[]" },
   ],
+  anexar_tramo: [
+    { nombre: "p_paso_id", tipo: "uuid" },
+    { nombre: "p_nombre", tipo: "text" },
+  ],
+  borrar_tramo: [{ nombre: "p_tramo_id", tipo: "uuid" }],
 };
 
 function errorPglite(error: unknown): DbError {

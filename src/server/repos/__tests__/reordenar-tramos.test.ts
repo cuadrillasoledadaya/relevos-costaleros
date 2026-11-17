@@ -144,4 +144,73 @@ describe("reordenación transaccional de los tramos", () => {
     );
     expect(guardado.rows.map((fila) => fila.ordinal)).toEqual([1, 2, 3]);
   });
+
+  it("añade un tramo al final del recorrido y recalcula la entrada", async () => {
+    await crearTramos(["Salida", "Tramo 2", "Entrada"]);
+    const repos = crearRepositorioTramos(client);
+
+    const resultado = await repos.anexar(IDS.pasoA, "Vuelta a la plaza");
+
+    expect(resultado.error).toBeNull();
+    expect(resultado.data.map((tramo) => tramo.name)).toEqual([
+      "Salida",
+      "Tramo 2",
+      "Entrada",
+      "Vuelta a la plaza",
+    ]);
+    expect(resultado.data.map((tramo) => tramo.ordinal)).toEqual([1, 2, 3, 4]);
+    expect(resultado.data[0]?.kind).toBe("salida");
+    expect(resultado.data[resultado.data.length - 1]?.kind).toBe("entrada");
+    // Sólo hay una entrada: el tramo que era la entrada pasa a ser normal.
+    expect(
+      resultado.data.filter((tramo) => tramo.kind === "entrada"),
+    ).toHaveLength(1);
+  });
+
+  it("no añade un tramo sin nombre", async () => {
+    await crearTramos(["Salida", "Entrada"]);
+    const repos = crearRepositorioTramos(client);
+
+    const resultado = await repos.anexar(IDS.pasoA, "   ");
+
+    expect(resultado.error).not.toBeNull();
+    const guardado = await db.query<{ total: string }>(
+      `select count(*)::text as total from tramos where paso_id = $1`,
+      [IDS.pasoA],
+    );
+    expect(guardado.rows[0]?.total).toBe("2");
+  });
+
+  it("borra un tramo intermedio y renumera los que quedan", async () => {
+    const ids = await crearTramos(["Salida", "Tramo 2", "Tramo 3", "Entrada"]);
+    const repos = crearRepositorioTramos(client);
+
+    const resultado = await repos.eliminar(ids[1] as string);
+
+    expect(resultado.error).toBeNull();
+    expect(resultado.data.map((tramo) => tramo.name)).toEqual([
+      "Salida",
+      "Tramo 3",
+      "Entrada",
+    ]);
+    expect(resultado.data.map((tramo) => tramo.ordinal)).toEqual([1, 2, 3]);
+    expect(resultado.data[0]?.kind).toBe("salida");
+    expect(resultado.data[2]?.kind).toBe("entrada");
+  });
+
+  it("no borra un tramo de un paso ajeno", async () => {
+    const ids = await crearTramos(["Salida", "Entrada"]);
+    await establecerActor(db, "authenticated", IDS.capatazB);
+    const repos = crearRepositorioTramos(client);
+
+    const resultado = await repos.eliminar(ids[0] as string);
+
+    expect(resultado.error).not.toBeNull();
+    await restaurarRol(db);
+    const guardado = await db.query<{ total: string }>(
+      `select count(*)::text as total from tramos where paso_id = $1`,
+      [IDS.pasoA],
+    );
+    expect(guardado.rows[0]?.total).toBe("2");
+  });
 });

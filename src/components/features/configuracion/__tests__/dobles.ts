@@ -49,6 +49,18 @@ export type Almacen = {
 /** Contador de ids para las filas nuevas. */
 let contador = 0;
 
+/** Renumera 1..N y vuelve a poner los tipos canónicos del recorrido. */
+function normalizarTramos(tramos: Tramo[]): Tramo[] {
+  const ordenados = [...tramos].sort((a, b) => a.ordinal - b.ordinal);
+  const total = ordenados.length;
+  ordenados.forEach((tramo, indice) => {
+    tramo.ordinal = indice + 1;
+    tramo.kind =
+      indice === 0 ? "salida" : indice === total - 1 ? "entrada" : "normal";
+  });
+  return ordenados;
+}
+
 function idNuevo(): string {
   contador += 1;
   return `99999999-9999-4999-8999-${String(contador).padStart(12, "0")}`;
@@ -287,10 +299,38 @@ export function crearRepositorios(almacen: Almacen): RepositoriosPaso {
     eliminar: async (id) => {
       const indice = almacen.tramos.findIndex((tramo) => tramo.id === id);
       if (indice < 0) {
-        return { data: null, error: { message: "El tramo no existe" } };
+        return { data: [], error: { message: "El tramo no existe" } };
       }
-      const [tramo] = almacen.tramos.splice(indice, 1);
-      return { data: tramo ?? null, error: null };
+      const [borrado] = almacen.tramos.splice(indice, 1);
+      const delPaso = almacen.tramos.filter(
+        (tramo) => tramo.paso_id === borrado?.paso_id,
+      );
+      return { data: normalizarTramos(delPaso), error: null };
+    },
+    anexar: async (pasoId, nombre) => {
+      const delPaso = almacen.tramos.filter(
+        (tramo) => tramo.paso_id === pasoId,
+      );
+      const total = delPaso.length;
+      if (total >= 2) {
+        for (const tramo of delPaso) {
+          if (tramo.kind === "entrada") tramo.kind = "normal";
+        }
+      }
+      const nuevo: Tramo = {
+        id: idNuevo(),
+        paso_id: pasoId,
+        name: nombre,
+        ordinal: total + 1,
+        kind: total === 0 ? "salida" : "entrada",
+      };
+      almacen.tramos.push(nuevo);
+      return {
+        data: normalizarTramos(
+          almacen.tramos.filter((tramo) => tramo.paso_id === pasoId),
+        ),
+        error: null,
+      };
     },
     reordenar: async (pasoId, orden) => {
       const delPaso = almacen.tramos.filter(
