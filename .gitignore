@@ -37,6 +37,9 @@ yarn-error.log*
 # local infrastructure
 .supabase/
 
+# referencias locales del CLI de Supabase (supabase link)
+supabase/.temp/
+
 # test artifacts
 playwright-report/
 test-results/
