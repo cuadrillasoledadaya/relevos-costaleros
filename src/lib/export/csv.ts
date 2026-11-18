@@ -30,7 +30,9 @@ export type FilaDeRelevo = {
   trabajadera: string;
 };
 
-/** Una fila del CSV de descansos: un costalero. */
+/**
+ * Una fila del CSV de descansos: un costalero.
+ */
 export type FilaDeDescansos = {
   /** Nombre del costalero. */
   costalero: string;
@@ -39,6 +41,29 @@ export type FilaDeDescansos = {
   /** Número total de descansos. */
   total: number;
 };
+
+/**
+ * Cabeceras de la respuesta con el archivo adjunto.
+ *
+ * El nombre va dos veces: la versión simple en ASCII (la que usan los
+ * navegadores antiguos) y la `filename*` con el nombre real en UTF-8
+ * (RFC 5987). Sin esto, un nombre con acentos llega al usuario como
+ * `demostraciÃ³n`.
+ */
+export function cabecerasDeArchivo(nombre: string): Record<string, string> {
+  const simple = nombre
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+  return {
+    "Content-Type": "text/csv; charset=utf-8",
+    "Content-Disposition": `attachment; filename="${simple}"; filename*=UTF-8''${encodeURIComponent(nombre)}`,
+    "Cache-Control": "no-store",
+  };
+}
 
 /**
  * Una celda del CSV: si trae separador, comillas o salto de línea, va entre
