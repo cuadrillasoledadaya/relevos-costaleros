@@ -572,7 +572,9 @@ false`).
      (`en_paso`/`descanso`), el puesto (vacío si descansa) y la trabajadera. El de descansos lleva
      una fila por costalero con los tramos en los que descansa y su total.
   4. **CSV para Excel en español**: separador `;`, BOM UTF-8 (sin él Excel rompe los acentos) y
-     `Content-Disposition` con el nombre del archivo.
+     `Content-Disposition` con el nombre del archivo **dos veces**: en ASCII (la que usan los
+     navegadores antiguos) y en UTF-8 con el RFC 5987 (`filename*=UTF-8''…`). Con sólo la versión
+     ASCII, un paso con acentos llegaba al capataz como «demostraciÃ³n».
   5. **Sólo el capataz dueño** de la cuadrilla del paso imprime o exporta; un plan ajeno responde
      403 y uno inexistente 404.
   6. **La impresión es de verdad**: `window.print()` con `@media print` en `src/styles/print.css`
@@ -583,4 +585,11 @@ false`).
 src/components/features/hoja` — **28 tests**; suite completa **271 tests en 43 ficheros** y
   `pnpm build` en verde con las rutas nuevas (`/api/export/relevos.csv`,
   `/api/export/plan-por-costalero.csv` y `/cuadrillas/[cuadrillaId]/paso/[pasoId]/hoja`).
+- **Verificado contra el Supabase cloud** (con la app compilada en local y una sesión real del
+  capataz): `POST /api/planes` crea el plan en la base de verdad; `GET /api/export/relevos.csv`
+  responde 200 con `text/csv; charset=utf-8`, el BOM en los bytes y 48 filas (12 costaleros ×
+  4 tramos) más la cabecera; `GET /api/export/plan-por-costalero.csv` responde 200 con 12 filas
+  más la cabecera; y la pantalla de la hoja responde 200 y enseña los puestos de §6, la
+  trabajadera, los botones de imprimir y los enlaces de exportación. Los planes de prueba se
+  borraron y los datos de demostración quedan intactos.
 - **Corte de la unidad**: dos commits y dos PRs encadenados — PR #33 (exportación) y PR #34 (hoja).
