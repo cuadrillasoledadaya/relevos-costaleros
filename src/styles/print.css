@@ -1,0 +1,85 @@
+/*
+ * Estilos de impresión de la hoja de relevos (P6, §9).
+ *
+ * Los importa la propia pantalla de la hoja (`import "@/styles/print.css"`),
+ * no `globals.css` (que es de W3 y no se toca).
+ *
+ * En papel: una hoja por página, sin navegación ni controles, fondo blanco y
+ * ninguna fila partida a la mitad.
+ */
+
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  /* La navegación y los controles no se imprimen. */
+  header,
+  nav,
+  [data-print="oculto"] {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 11pt;
+  }
+
+  /* El contenedor de la app no aporta nada en papel. */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Una hoja por página. */
+  .hoja {
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .hoja:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Ninguna fila se parte a la mitad. */
+  tr,
+  thead,
+  tfoot {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* La tabla usa el ancho de la página y sin scroll. */
+  .hoja table {
+    width: 100% !important;
+    font-size: 10pt;
+  }
+
+  .hoja th,
+  .hoja td {
+    position: static !important;
+    padding: 2mm 1.5mm !important;
+    border-color: #000000 !important;
+  }
+
+  /* Los textos se leen bien en blanco y negro. */
+  .hoja * {
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  .hoja th {
+    background: #ffffff !important;
+  }
+}
