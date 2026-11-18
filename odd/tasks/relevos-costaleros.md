@@ -137,19 +137,19 @@ Objetivo blando EQ: minimizar la dispersión de descansos dentro de cada pool y 
 
 ## Tasks
 
-| ID  | Specs                                  | Ruta                                                                                      | Unidad | Commit                                                                                 | Estado                       |
-| --- | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------- | ---------------------------- |
-| T1  | S2, S4                                 | Bootstrap: scaffold, lint, CI, docs, spec dentro del repo                                 | W0     | `2d9c7d5`, `0c33f83`, `836d41b`, `798c8bf`                                             | Hecha                        |
-| T2  | S3                                     | Migraciones, RLS, seed, repositorios, schemas zod                                         | W1     | `1612d61` + `fix(db): ancla de pertenencia del costalero` (L6)                         | Hecha                        |
-| T3  | S5, S6, S7, S8, S9, S10, S11, S12, S13 | Dominio puro: glosario, modelo, reglas, factibilidad, solver                              | W2     | `1612d61`                                                                              | Hecha                        |
-| T4  | S1, S4                                 | Design system, PWA (manifest, iconos, service worker), shell                              | W3     | `1612d61`                                                                              | Hecha                        |
-| T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | cadena de 7 PRs (#2 a #8) + `fix(db): indice unico parcial`                            | Hecha                        |
-| T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | cadena de 5 PRs (#9 a #13)                                                             | Hecha                        |
-| T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `4b9e840`, `1b1dc2f`, `e531b18`, `c9dbec4`, `00b5053`, `a4ea723`, `e6dd758`, `289e030` | Entregada (PRs #21-#27)      |
-| T8  | S13, S17                               | Plan de relevos: API de cálculo, pantalla principal, estadísticas, versiones              | W7     | `12876d5` (A1), `9fadd19` (A2), `48aa360` + `457c731` (A3)                             | En curso (A1, A2, A3 hechas) |
-| T9  | S18, S19                               | Hoja por trabajadera, estilos de impresión A4, exportación CSV                            | W8     | `feat(hoja): vista por trabajadera con tabla de tramos y puestos`                      | Pendiente                    |
-| T10 | S1, S4, S9–S13                         | E2E del flujo completo, offline, accesibilidad, performance                               | W9     | `test(e2e): flujo completo login a exportacion`                                        | Pendiente                    |
-| T11 | S2, S3, S4                             | README, glosario publicado, modelo de datos, guía de relevos, manual del capataz, runbook | W10    | `docs(readme): guia de arranque del proyecto`                                          | Pendiente                    |
+| ID  | Specs                                  | Ruta                                                                                      | Unidad | Commit                                                                                           | Estado                    |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ | ------------------------- |
+| T1  | S2, S4                                 | Bootstrap: scaffold, lint, CI, docs, spec dentro del repo                                 | W0     | `2d9c7d5`, `0c33f83`, `836d41b`, `798c8bf`                                                       | Hecha                     |
+| T2  | S3                                     | Migraciones, RLS, seed, repositorios, schemas zod                                         | W1     | `1612d61` + `fix(db): ancla de pertenencia del costalero` (L6)                                   | Hecha                     |
+| T3  | S5, S6, S7, S8, S9, S10, S11, S12, S13 | Dominio puro: glosario, modelo, reglas, factibilidad, solver                              | W2     | `1612d61`                                                                                        | Hecha                     |
+| T4  | S1, S4                                 | Design system, PWA (manifest, iconos, service worker), shell                              | W3     | `1612d61`                                                                                        | Hecha                     |
+| T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | cadena de 7 PRs (#2 a #8) + `fix(db): indice unico parcial`                                      | Hecha                     |
+| T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | cadena de 5 PRs (#9 a #13)                                                                       | Hecha                     |
+| T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `4b9e840`, `1b1dc2f`, `e531b18`, `c9dbec4`, `00b5053`, `a4ea723`, `e6dd758`, `289e030`           | Entregada (PRs #21-#27)   |
+| T8  | S13, S17                               | Plan de relevos: API de cálculo, pantalla principal, estadísticas, versiones              | W7     | `12876d5` (A1), `9fadd19` (A2), `48aa360` + `457c731` (A3), `feat(plan): pantalla principal` (B) | Hecha (W7: A1, A2, A3, B) |
+| T9  | S18, S19                               | Hoja por trabajadera, estilos de impresión A4, exportación CSV                            | W8     | `feat(hoja): vista por trabajadera con tabla de tramos y puestos`                                | Pendiente                 |
+| T10 | S1, S4, S9–S13                         | E2E del flujo completo, offline, accesibilidad, performance                               | W9     | `test(e2e): flujo completo login a exportacion`                                                  | Pendiente                 |
+| T11 | S2, S3, S4                             | README, glosario publicado, modelo de datos, guía de relevos, manual del capataz, runbook | W10    | `docs(readme): guia de arranque del proyecto`                                                    | Pendiente                 |
 
 ---
 
@@ -514,3 +514,39 @@ false`).
 - **Corte de la unidad**: la unidad no cabía en un PR de ~400 líneas, así que se parte en dos
   commits y dos PRs encadenados — PR #30 (servicio, persistencia y migración) y PR #31 (endpoints
   y server actions).
+
+### L19 · W7-B: la pantalla principal del plan de relevos (P5)
+
+- **Qué entrega**: `src/app/(app)/cuadrillas/[cuadrillaId]/paso/[pasoId]/plan/page.tsx` (servidor) y
+  `src/components/features/plan/**` (cliente): vistas por tramo y por costalero, panel de
+  estadísticas, historial de versiones y diagnóstico.
+- **Decisiones del orquestador**:
+  1. **El solver no corre en el navegador** (§13.3). La pantalla es un componente de cliente, pero
+     el cálculo va a la server action `calcularPlan`, que usa el mismo servicio que la API: la
+     pantalla y el HTTP no pueden divergir.
+  2. **La pantalla enseña el plan leído de la base de datos**, no el que quedó en memoria al
+     calcularlo: la página usa `leerPlanDeLaBase`, que lo reconstruye con las filas de `relevos` y
+     lo vuelve a verificar con `verificarPlan` (S-5). Si el plan guardado ya no encaja con la
+     configuración actual del paso (alguien cambió el pool), la pantalla **no lo muestra**: lo dice
+     y ofrece recalcular.
+  3. **Qué versión se muestra**: la que se pide en la URL (`?version=`), si existe; si no, la
+     publicada; si no, la más reciente. El historial deja ver las demás.
+  4. **Los nombres salen de la base**: los pools se leen con el nombre de cada costalero y en
+     pantalla no aparece ningún id.
+  5. **El botón de «aplicar la sugerencia»** del diagnóstico: si al diagnóstico le faltan tramos
+     (`cifras.tramosFaltantes`), la app los añade al recorrido con la acción de tramos y vuelve a
+     calcular; si lo que falta es el pool, la carga o las boquillas, lleva a la configuración del
+     paso, que es donde se cambian. El diagnóstico se enseña con su código, sus cifras y su
+     sugerencia (§11.4).
+- **Verificado por el orquestador**: `pnpm vitest run src/components/features/plan` — **11 tests**:
+  los mismos nombres que tiene el plan, la vista por costalero, el plan que no pasa la
+  verificación no se enseña, el estado vacío con su CTA, el panel de estadísticas (media,
+  dispersión y cumplimiento de R1 a R5), el historial con la versión publicada marcada, el cálculo
+  con una semilla y con varias, la publicación, el diagnóstico con sus cifras y las dos ramas del
+  botón de la sugerencia.
+- **Verificado contra el Supabase cloud** (`mrmdonbmmhurlpnicjbn`): la migración
+  `20250330001200_publicar_plan.sql` está aplicada y la función `publicar_plan` se comporta como
+  debe — el capataz publica y el plan pasa a `publicado`; al publicar otra versión del mismo paso la
+  anterior vuelve a `borrador` (un paso, un plan publicado); el costalero recibe «El plan no
+  existe.» (la RLS no le deja ni verlo) y `anon` recibe «permission denied for function
+  publicar_plan». Los planes de prueba se borraron y los datos de demostración quedan intactos.
