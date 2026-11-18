@@ -154,9 +154,11 @@ describe("GET /api/export/relevos.csv", () => {
     expect(respuesta.headers.get("Content-Type")).toBe(
       "text/csv; charset=utf-8",
     );
-    expect(respuesta.headers.get("Content-Disposition")).toContain(
-      'filename="relevos-paso-de-la-soledad.csv"',
-    );
+    // El nombre va en ASCII y también en UTF-8 (RFC 5987), para que los
+    // acentos no lleguen como «demostraciÃ³n».
+    const disposicion = respuesta.headers.get("Content-Disposition") ?? "";
+    expect(disposicion).toContain('filename="relevos-paso-de-la-soledad.csv"');
+    expect(disposicion).toContain("filename*=UTF-8''");
 
     // El BOM va en los bytes: `Response.text()` lo quita al decodificar.
     const bytes = new Uint8Array(await respuesta.arrayBuffer());

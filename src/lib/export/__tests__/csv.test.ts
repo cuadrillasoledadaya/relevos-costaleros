@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   BOM_UTF8,
   SEPARADOR_CSV,
+  cabecerasDeArchivo,
   csvDeDescansos,
   csvDeRelevos,
   type FilaDeRelevo,
@@ -102,6 +103,18 @@ describe("CSV de la exportación", () => {
     );
     expect(lineas).toHaveLength(3);
     expect(lineas[1]).toBe("Ana Ruiz;Entrada;1");
+  });
+
+  it("el nombre del archivo va en ASCII y también en UTF-8", () => {
+    const cabeceras = cabecerasDeArchivo("relevos-paso-de-demonstración.csv");
+
+    expect(cabeceras["Content-Type"]).toBe("text/csv; charset=utf-8");
+    expect(cabeceras["Content-Disposition"]).toContain(
+      'filename="relevos-paso-de-demonstracion.csv"',
+    );
+    expect(cabeceras["Content-Disposition"]).toContain(
+      "filename*=UTF-8''relevos-paso-de-demonstraci%C3%B3n.csv",
+    );
   });
 
   it("con la cabecera sola, el CSV sólo tiene esa línea", () => {

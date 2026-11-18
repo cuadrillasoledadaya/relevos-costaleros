@@ -6,7 +6,7 @@
  * los acentos se vean bien.
  */
 
-import { csvDeRelevos } from "@/lib/export/csv";
+import { cabecerasDeArchivo, csvDeRelevos } from "@/lib/export/csv";
 import { leerPlanParaExportar } from "@/server/hoja/plan";
 import { createServerSupabaseClient } from "@/server/supabase/server";
 
@@ -54,13 +54,10 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const csv = csvDeRelevos(resultado.datos.filas);
+  const nombre = `relevos-${resultado.datos.paso.nombre}.csv`;
   return new Response(csv, {
     status: 200,
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="relevos-${resultado.datos.paso.nombre.replace(/\s+/g, "-").toLowerCase()}.csv"`,
-      "Cache-Control": "no-store",
-    },
+    headers: cabecerasDeArchivo(nombre),
   });
 }
 
