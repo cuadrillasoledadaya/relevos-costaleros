@@ -51,6 +51,7 @@ const FUNCIONES_PERMITIDAS: Record<
     { nombre: "p_stats", tipo: "jsonb" },
     { nombre: "p_relevos", tipo: "jsonb" },
   ],
+  publicar_plan: [{ nombre: "p_plan_id", tipo: "uuid" }],
 };
 
 function errorPglite(error: unknown): DbError {

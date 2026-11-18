@@ -52,6 +52,12 @@ export type RepositorioPlanes = {
       }>;
     },
   ): Promise<ResultadoRepositorio<Plan>>;
+  /**
+   * Publica un plan de forma atómica (`publicar_plan`): el plan pasa a
+   * `publicado` y los demás planes del mismo paso vuelven a `borrador`, de
+   * modo que solo hay un plan publicado por paso.
+   */
+  publicar(id: string): Promise<ResultadoRepositorio<Plan>>;
   actualizar(
     id: string,
     cambios: PlanActualizacionInput,
@@ -123,6 +129,18 @@ export function crearRepositorioPlanes(
             estado: relevo.estado,
           })),
         }),
+      );
+      return { data: resultado.data[0] ?? null, error: resultado.error };
+    },
+
+    /**
+     * Publica un plan en una sola transacción (`publicar_plan`). El nombre del
+     * argumento es el de la función (`p_plan_id`): PostgREST busca la firma
+     * por sus argumentos.
+     */
+    async publicar(id) {
+      const resultado = await resultadoDeConsulta<Plan>(
+        client.rpc<Plan[]>("publicar_plan", { p_plan_id: id }),
       );
       return { data: resultado.data[0] ?? null, error: resultado.error };
     },
