@@ -137,19 +137,19 @@ Objetivo blando EQ: minimizar la dispersión de descansos dentro de cada pool y 
 
 ## Tasks
 
-| ID  | Specs                                  | Ruta                                                                                      | Unidad | Commit                                                                | Estado    |
-| --- | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------- | --------- |
-| T1  | S2, S4                                 | Bootstrap: scaffold, lint, CI, docs, spec dentro del repo                                 | W0     | `2d9c7d5`, `0c33f83`, `836d41b`, `798c8bf`                            | Hecha     |
-| T2  | S3                                     | Migraciones, RLS, seed, repositorios, schemas zod                                         | W1     | `1612d61` + `fix(db): ancla de pertenencia del costalero` (L6)        | Hecha     |
-| T3  | S5, S6, S7, S8, S9, S10, S11, S12, S13 | Dominio puro: glosario, modelo, reglas, factibilidad, solver                              | W2     | `1612d61`                                                             | Hecha     |
-| T4  | S1, S4                                 | Design system, PWA (manifest, iconos, service worker), shell                              | W3     | `1612d61`                                                             | Hecha     |
-| T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | cadena de 7 PRs (#2 a #8) + `fix(db): indice unico parcial`           | Hecha     |
-| T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | cadena de 5 PRs (#9 a #13)                                            | Hecha     |
-| T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `feat(tramos): alta, renombre y borrado de tramos`                    | Pendiente |
-| T8  | S13, S17                               | Plan de relevos: API de cálculo, pantalla principal, estadísticas, versiones              | W7     | `feat(plan): pantalla principal con vistas por tramo y por costalero` | Pendiente |
-| T9  | S18, S19                               | Hoja por trabajadera, estilos de impresión A4, exportación CSV                            | W8     | `feat(hoja): vista por trabajadera con tabla de tramos y puestos`     | Pendiente |
-| T10 | S1, S4, S9–S13                         | E2E del flujo completo, offline, accesibilidad, performance                               | W9     | `test(e2e): flujo completo login a exportacion`                       | Pendiente |
-| T11 | S2, S3, S4                             | README, glosario publicado, modelo de datos, guía de relevos, manual del capataz, runbook | W10    | `docs(readme): guia de arranque del proyecto`                         | Pendiente |
+| ID  | Specs                                  | Ruta                                                                                      | Unidad | Commit                                                                                           | Estado                    |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ | ------------------------- |
+| T1  | S2, S4                                 | Bootstrap: scaffold, lint, CI, docs, spec dentro del repo                                 | W0     | `2d9c7d5`, `0c33f83`, `836d41b`, `798c8bf`                                                       | Hecha                     |
+| T2  | S3                                     | Migraciones, RLS, seed, repositorios, schemas zod                                         | W1     | `1612d61` + `fix(db): ancla de pertenencia del costalero` (L6)                                   | Hecha                     |
+| T3  | S5, S6, S7, S8, S9, S10, S11, S12, S13 | Dominio puro: glosario, modelo, reglas, factibilidad, solver                              | W2     | `1612d61`                                                                                        | Hecha                     |
+| T4  | S1, S4                                 | Design system, PWA (manifest, iconos, service worker), shell                              | W3     | `1612d61`                                                                                        | Hecha                     |
+| T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | cadena de 7 PRs (#2 a #8) + `fix(db): indice unico parcial`                                      | Hecha                     |
+| T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | cadena de 5 PRs (#9 a #13)                                                                       | Hecha                     |
+| T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `4b9e840`, `1b1dc2f`, `e531b18`, `c9dbec4`, `00b5053`, `a4ea723`, `e6dd758`, `289e030`           | Entregada (PRs #21-#27)   |
+| T8  | S13, S17                               | Plan de relevos: API de cálculo, pantalla principal, estadísticas, versiones              | W7     | `12876d5` (A1), `9fadd19` (A2), `48aa360` + `457c731` (A3), `feat(plan): pantalla principal` (B) | Hecha (W7: A1, A2, A3, B) |
+| T9  | S18, S19                               | Hoja por trabajadera, estilos de impresión A4, exportación CSV                            | W8     | `feat(hoja): vista por trabajadera con tabla de tramos y puestos`                                | Pendiente                 |
+| T10 | S1, S4, S9–S13                         | E2E del flujo completo, offline, accesibilidad, performance                               | W9     | `test(e2e): flujo completo login a exportacion`                                                  | Pendiente                 |
+| T11 | S2, S3, S4                             | README, glosario publicado, modelo de datos, guía de relevos, manual del capataz, runbook | W10    | `docs(readme): guia de arranque del proyecto`                                                    | Pendiente                 |
 
 ---
 
@@ -389,3 +389,164 @@ module" }`), así que **en el bundle** cualquier carga del cliente de Supabase l
 - **Cuentas de demostración**: `capataz@relevos.example` y `costalero-01@relevos.example`. La
   contraseña **no** está en el repositorio (es público): está en
   `~/.supabase-relevos-costaleros-cuentas` (600).
+
+### L13 · W6 (T7): el recorrido se reordena en una transacción
+
+- El briefing de W6 exige que el reordenamiento «sea transaccional». Con PostgREST no hay
+  transacciones de varias sentencias, así que la reordenación la hace una función de Postgres
+  (`reordenar_tramos`) y el alta y la baja tienen las suyas (`anexar_tramo` y `borrar_tramo`).
+  Las tres son SECURITY INVOKER: mandan las políticas de RLS de §10.
+- La función aparta los ordinales a un rango libre, escribe el orden nuevo 1..N (sin huecos ni
+  repetidos) y recalcula los tipos canónicos (el primero `salida`, el último `entrada`) en la
+  misma operación. El `unique (paso_id, ordinal)` de §10 no se toca: no hay columna nueva.
+- **Decisión del orquestador sobre los tipos**: los cambios de estructura (alta, baja y
+  reordenación) recalculan los tipos canónicos; el tipo que el capataz fuerza a mano se mantiene
+  hasta el siguiente cambio de estructura, y la UI avisa mientras el recorrido quede incoherente
+  (`avisosDeCoherencia`, en `src/domain/tramos.ts`).
+- **Superficie ampliada** respecto al briefing de W6: además de la pantalla y las server actions,
+  la unidad toca `src/server/repos/tramos.ts`, `src/server/supabase/types.ts` (el cliente necesita
+  `rpc`), el doble de PGlite y dos migraciones. Sin eso no hay reordenamiento atómico.
+- **Bug encontrado al verificar contra la nube**: PostgREST busca la función por el nombre de sus
+  argumentos. La función declara `p_paso_id`/`p_orden` y el repositorio mandaba `paso_id`/`orden`,
+  así que la llamada fallaba con «Could not find the function public.reordenar_tramos(orden,
+  paso_id)». PGlite no podía verlo (el doble resuelve por posición). Corregido y verificado contra
+  el proyecto cloud: reordenar al revés, volver al orden original y una lista que no coincide
+  (rechazada en español y sin tocar los datos).
+- Migraciones `20250330000500` y `20250330000600` aplicadas al proyecto cloud
+  `mrmdonbmmhurlpnicjbn` y las tres funciones comprobadas contra el PostgREST real.
+- **Permisos de las funciones (verificado en la nube)**: en Postgres una función nace con
+  `EXECUTE` para `PUBLIC`, y en Supabase las funciones nuevas reciben además un permiso explícito
+  para `anon` por los `default privileges` del proyecto. Con sólo el `grant` a `authenticated` y
+  `service_role`, cualquier visitante podía invocar las funciones de tramos (el RLS ya impedía que
+  tocaran datos ajenos, pero el permiso sobraba). Lo cierran dos migraciones: `20250330000700`
+  quita el de `PUBLIC` y `20250330000800` el de `anon`. Comprobado contra la nube: `anon` recibe
+  «permission denied», el capataz reordena y el costalero (autenticado pero no dueño) recibe «La
+  lista de tramos no coincide con los tramos guardados del paso.» sin tocar los datos.
+- **Ruta de T7**: la unidad se hizo inline (no hay dos unidades independientes ni señal de
+  backstop al empezar). Cuando el runtime señaló el backstop de contexto (151.976 tokens), la
+  pantalla P4 se delegó a un writer acotado, con superficies de edición derivadas por el
+  orquestador.
+
+### L14 · W6 (T7) entregada: la cadena de PRs y lo que aprendimos al verificar en la nube
+
+- **Qué entrega W6**: el apartado de tramos (P4) completo. Alta, renombrado, tipo forzado, subida y
+  bajada y borrado con confirmación; factibilidad recalculada en vivo con `evaluarFactibilidad` y
+  semáforo F-1..F-6 con la precondición fallida en rojo. El paso 5 del wizard enlaza a la pantalla
+  (antes no era alcanzable desde la interfaz).
+- **Cadena de entrega**: 7 PRs encadenados sobre `main` (#21 a #27), con un corte por unidad de
+  trabajo y los tests junto a su código. El usuario eligió partir el panel de factibilidad en su
+  propio PR para que ningún slice pese demasiado (#26 = 897 líneas y #27 = 217). La unidad entera
+  son 2.715 líneas.
+- **Verificado por el orquestador**: `pnpm lint`, `pnpm typecheck`, `pnpm test` (**183 tests en 30
+  ficheros**) y `pnpm build` en verde; CI verde en los 7 PRs; y comprobación funcional contra el
+  proyecto cloud con una sesión real del capataz: la ruta responde 200 y renderiza los datos de
+  verdad, y sin sesión responde 307 a `/login?returnTo=…`.
+- **Riesgo de la unidad**: `Risk: item 1` (el reordenamiento reescribe los ordinales guardados) e
+  `item 5` (las migraciones se aplican en la base cloud). El plan de verificación exigía un
+  verificador independiente; el runtime no debe revisión nativa por presupuesto (`reviewDue:
+false`).
+- **Aprendizajes que se llevan a W7**:
+  1. Todo RPC nuevo se verifica contra el PostgREST real, no sólo contra PGlite: el doble de
+     prueba resuelve la firma por posición y no ve el fallo del nombre de los argumentos.
+  2. Una función nueva nace con `EXECUTE` para `PUBLIC` y, en Supabase, además para `anon`: hay que
+     revocar los dos permisos y dejar sólo `authenticated` y `service_role`.
+  3. La persistencia «en dos pasos dentro de una transacción» del briefing de W7 (`planes` +
+     `relevos`) se tiene que resolver igual que aquí: con una función de Postgres, no con dos
+     llamadas del servidor.
+
+### L17 · W7 (T8) en curso: persistencia transaccional y endpoint de cálculo
+
+- **Corte de entrega de W7**: la unidad se entrega en PRs encadenados, cada uno por debajo de
+  ~400 líneas escritas, para que el diff siga siendo revisable. PR #28 = A1 (persistencia),
+  PR #29 = A2 (endpoint de cálculo), PR #30 y PR #31 = A3 (servicio de planes, endpoints y
+  server actions), y a continuación B (pantalla principal con estadísticas).
+- **W7-A1 · `12876d5`** — `guardar_plan` (migración `20250330001100_guardar_plan.sql`) escribe
+  `planes` + `relevos` en una sola transacción y calcula la versión en la base de datos con
+  `max(version)+1` sobre el paso bloqueado con `FOR UPDATE`. El repositorio gana
+  `RepositorioPlanes.guardar()`. Verificado en la nube: v3 → v4, `anon` y costalero bloqueados,
+  datos de demostración intactos.
+- **W7-A2 · `9fadd19`** — `POST /api/solve` (`src/app/api/solve/route.ts`, `runtime = "nodejs"`)
+  calcula el plan y **no persiste nada**. Orden de comprobaciones: 400 (cuerpo) → 401 (sesión) →
+  403 (propiedad) → 200. Un plan imposible no es un error: es un 200 con `ok: false` y el
+  diagnóstico con cifras y sugerencia. Un paso que la RLS no deja leer responde 403, para no
+  filtrar su existencia. 8 tests con el solver real envuelto en spy: los casos 400/401/403
+  comprueban que el solver **no** se llama.
+- **Verificado por el orquestador**: `pnpm vitest run src/app/api/solve` (8/8), `pnpm typecheck`
+  y `pnpm lint` sin salida. La suite completa y el build quedan para el cierre de la unidad W7.
+- **Contrato a respetar en A3 y B**: el campo del cuerpo se llama **`trabajadoras`** (con «e»),
+  no `trabajadoras`. `POST /api/planes` y la pantalla principal tienen que usar ese mismo nombre.
+- **Riesgo de la unidad**: `Risk: item 3` (contrato de la API pública) e `item 1` (la versión del
+  plan se calcula y se escribe en la base de datos). El plan de verificación de A1 ya se ejecutó
+  contra la nube; A3 y B WRITE en tablas y amplían la API, así que repiten la comprobación en
+  la nube antes de cerrar W7.
+
+### L18 · W7-A3: la API de planes (cálculo verificado, historial y publicación)
+
+- **Qué entrega**: el servicio del plan (`src/server/plan/**`), los tres endpoints de §12
+  (`POST /api/planes`, `GET /api/planes`, `POST /api/planes/[id]/publicar`) y las server actions
+  (`src/server/actions/plan.ts`). Los endpoints y las acciones usan **el mismo servicio**: la
+  pantalla y el HTTP no pueden divergir.
+- **Decisiones del orquestador** (no las fija la spec, pero se derivan de ella):
+  1. **El servidor calcula el plan.** `POST /api/planes` recibe `{ pasoId, seed? }` (§12) y
+     compone el `RelevoPlanInput` con lo que hay guardado en la base de datos (§13.3): el
+     navegador no manda el reparto, sólo el paso y, si quiere, la semilla.
+  2. **Un plan imposible no es un error**: es un `200` con `{ ok: false, diagnostico }`, la misma
+     forma que `POST /api/solve` (§11.4).
+  3. **Nada se persiste sin `verificarPlan`** (S-5): el servicio comprueba r1..r4 y sólo entonces
+     llama a `guardar_plan`. Un plan que no los supera no se guarda ni se devuelve.
+  4. **Un paso tiene un solo plan publicado.** La función nueva `publicar_plan` (migración
+     `20250330001200`) publica el plan elegido y despublica los demás del mismo paso en una sola
+     transacción. Lo pide §9 (P5: «el historial de versiones del plan, con la que está
+     publicada») y lo necesita §10 (el costalero sólo lee planes publicados: con dos publicados
+     vería dos planes).
+  5. **La publicación es una función de Postgres**, no dos llamadas del servidor: con PostgREST no
+     hay transacciones de varias sentencias. Es la misma lección que W6 (L14), y por eso los
+     permisos de la función nueva siguen la convención: nada para `public` ni para `anon`, sólo
+     para `authenticated` y `service_role`.
+  6. El pool de cada trabajadera se ordena por el nombre del costalero (`localeCompare` con
+     `"es"`), igual que en el wizard: la misma base de datos produce siempre el mismo plan.
+- **Verificado por el orquestador**: `pnpm vitest run src/server/plan` (6 tests contra **PGlite
+  con las migraciones reales**) y `pnpm vitest run src/app/api/planes src/server/actions` (21
+  tests). El test que importa: **el plan se lee de la base de datos y vuelve a pasar
+  `verificarPlan` (r1..r4)** — no basta con que pasara en memoria. También se comprueba que un
+  plan imposible no deja filas guardadas, que una versión nueva no pisa la anterior, que publicar
+  deja un único plan publicado y que otro capataz no opera con los planes de un paso ajeno.
+- **Corte de la unidad**: la unidad no cabía en un PR de ~400 líneas, así que se parte en dos
+  commits y dos PRs encadenados — PR #30 (servicio, persistencia y migración) y PR #31 (endpoints
+  y server actions).
+
+### L19 · W7-B: la pantalla principal del plan de relevos (P5)
+
+- **Qué entrega**: `src/app/(app)/cuadrillas/[cuadrillaId]/paso/[pasoId]/plan/page.tsx` (servidor) y
+  `src/components/features/plan/**` (cliente): vistas por tramo y por costalero, panel de
+  estadísticas, historial de versiones y diagnóstico.
+- **Decisiones del orquestador**:
+  1. **El solver no corre en el navegador** (§13.3). La pantalla es un componente de cliente, pero
+     el cálculo va a la server action `calcularPlan`, que usa el mismo servicio que la API: la
+     pantalla y el HTTP no pueden divergir.
+  2. **La pantalla enseña el plan leído de la base de datos**, no el que quedó en memoria al
+     calcularlo: la página usa `leerPlanDeLaBase`, que lo reconstruye con las filas de `relevos` y
+     lo vuelve a verificar con `verificarPlan` (S-5). Si el plan guardado ya no encaja con la
+     configuración actual del paso (alguien cambió el pool), la pantalla **no lo muestra**: lo dice
+     y ofrece recalcular.
+  3. **Qué versión se muestra**: la que se pide en la URL (`?version=`), si existe; si no, la
+     publicada; si no, la más reciente. El historial deja ver las demás.
+  4. **Los nombres salen de la base**: los pools se leen con el nombre de cada costalero y en
+     pantalla no aparece ningún id.
+  5. **El botón de «aplicar la sugerencia»** del diagnóstico: si al diagnóstico le faltan tramos
+     (`cifras.tramosFaltantes`), la app los añade al recorrido con la acción de tramos y vuelve a
+     calcular; si lo que falta es el pool, la carga o las boquillas, lleva a la configuración del
+     paso, que es donde se cambian. El diagnóstico se enseña con su código, sus cifras y su
+     sugerencia (§11.4).
+- **Verificado por el orquestador**: `pnpm vitest run src/components/features/plan` — **11 tests**:
+  los mismos nombres que tiene el plan, la vista por costalero, el plan que no pasa la
+  verificación no se enseña, el estado vacío con su CTA, el panel de estadísticas (media,
+  dispersión y cumplimiento de R1 a R5), el historial con la versión publicada marcada, el cálculo
+  con una semilla y con varias, la publicación, el diagnóstico con sus cifras y las dos ramas del
+  botón de la sugerencia.
+- **Verificado contra el Supabase cloud** (`mrmdonbmmhurlpnicjbn`): la migración
+  `20250330001200_publicar_plan.sql` está aplicada y la función `publicar_plan` se comporta como
+  debe — el capataz publica y el plan pasa a `publicado`; al publicar otra versión del mismo paso la
+  anterior vuelve a `borrador` (un paso, un plan publicado); el costalero recibe «El plan no
+  existe.» (la RLS no le deja ni verlo) y `anon` recibe «permission denied for function
+  publicar_plan». Los planes de prueba se borraron y los datos de demostración quedan intactos.

@@ -49,6 +49,18 @@ export type Almacen = {
 /** Contador de ids para las filas nuevas. */
 let contador = 0;
 
+/** Renumera 1..N y vuelve a poner los tipos canónicos del recorrido. */
+function normalizarTramos(tramos: Tramo[]): Tramo[] {
+  const ordenados = [...tramos].sort((a, b) => a.ordinal - b.ordinal);
+  const total = ordenados.length;
+  ordenados.forEach((tramo, indice) => {
+    tramo.ordinal = indice + 1;
+    tramo.kind =
+      indice === 0 ? "salida" : indice === total - 1 ? "entrada" : "normal";
+  });
+  return ordenados;
+}
+
 function idNuevo(): string {
   contador += 1;
   return `99999999-9999-4999-8999-${String(contador).padStart(12, "0")}`;
@@ -284,13 +296,108 @@ export function crearRepositorios(almacen: Almacen): RepositoriosPaso {
       Object.assign(tramo, cambios);
       return { data: tramo, error: null };
     },
+    actualizarEnRecorrido: async (id, cambios) => {
+      const tramo = almacen.tramos.find((candidate) => candidate.id === id);
+      if (!tramo) {
+        return {
+          data: [],
+          error: { message: "El tramo no existe." },
+        };
+      }
+      if (cambios.name !== undefined && cambios.name.trim() === "") {
+        return {
+          data: [],
+          error: { message: "El nombre del tramo no puede estar vacío." },
+        };
+      }
+      if (
+        cambios.kind !== undefined &&
+        !["salida", "normal", "entrada"].includes(cambios.kind)
+      ) {
+        return {
+          data: [],
+          error: {
+            message:
+              "El tipo del tramo tiene que ser salida, normal o entrada.",
+          },
+        };
+      }
+
+      if (cambios.name !== undefined) tramo.name = cambios.name.trim();
+      if (cambios.kind !== undefined) tramo.kind = cambios.kind;
+      return {
+        data: almacen.tramos
+          .filter((candidate) => candidate.paso_id === tramo.paso_id)
+          .sort((a, b) => a.ordinal - b.ordinal),
+        error: null,
+      };
+    },
     eliminar: async (id) => {
       const indice = almacen.tramos.findIndex((tramo) => tramo.id === id);
       if (indice < 0) {
-        return { data: null, error: { message: "El tramo no existe" } };
+        return { data: [], error: { message: "El tramo no existe" } };
       }
-      const [tramo] = almacen.tramos.splice(indice, 1);
-      return { data: tramo ?? null, error: null };
+      const [borrado] = almacen.tramos.splice(indice, 1);
+      const delPaso = almacen.tramos.filter(
+        (tramo) => tramo.paso_id === borrado?.paso_id,
+      );
+      return { data: normalizarTramos(delPaso), error: null };
+    },
+    anexar: async (pasoId, nombre) => {
+      const delPaso = almacen.tramos.filter(
+        (tramo) => tramo.paso_id === pasoId,
+      );
+      const total = delPaso.length;
+      const nuevo: Tramo = {
+        id: idNuevo(),
+        paso_id: pasoId,
+        name: nombre,
+        ordinal: total + 1,
+        kind: total === 0 ? "salida" : "entrada",
+      };
+      almacen.tramos.push(nuevo);
+      return {
+        data: normalizarTramos(
+          almacen.tramos.filter((tramo) => tramo.paso_id === pasoId),
+        ),
+        error: null,
+      };
+    },
+    reordenar: async (pasoId, orden) => {
+      const delPaso = almacen.tramos.filter(
+        (tramo) => tramo.paso_id === pasoId,
+      );
+      if (orden.length !== delPaso.length) {
+        return {
+          data: [],
+          error: {
+            message:
+              "La lista de tramos no coincide con los tramos guardados del paso.",
+          },
+        };
+      }
+      const porId = new Map(delPaso.map((tramo) => [tramo.id, tramo]));
+      for (const [indice, id] of orden.entries()) {
+        const tramo = porId.get(id);
+        if (!tramo) {
+          return {
+            data: [],
+            error: {
+              message:
+                "La lista de tramos no coincide con los tramos guardados del paso.",
+            },
+          };
+        }
+        tramo.ordinal = indice + 1;
+        tramo.kind =
+          indice === 0
+            ? "salida"
+            : indice === orden.length - 1
+              ? "entrada"
+              : "normal";
+      }
+      const ordenados = [...delPaso].sort((a, b) => a.ordinal - b.ordinal);
+      return { data: ordenados, error: null };
     },
   };
 

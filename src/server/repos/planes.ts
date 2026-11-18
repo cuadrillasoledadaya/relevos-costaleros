@@ -35,6 +35,29 @@ export type RepositorioPlanes = {
   listar(filtro: FiltroPlanes): Promise<ResultadoListaRepositorio<Plan>>;
   obtenerPorId(id: string): Promise<ResultadoRepositorio<Plan>>;
   crear(entrada: PlanInput): Promise<ResultadoRepositorio<Plan>>;
+  /**
+   * Guarda un plan y sus relevos en una sola transacción (`guardar_plan`).
+   * La versión la calcula la base de datos y el plan empieza como `borrador`.
+   */
+  guardar(
+    pasoId: string,
+    entrada: {
+      seed: number;
+      solverVersion: string;
+      stats: unknown;
+      relevos: Array<{
+        tramoId: string;
+        costaleroId: string;
+        estado: "en_paso" | "descanso";
+      }>;
+    },
+  ): Promise<ResultadoRepositorio<Plan>>;
+  /**
+   * Publica un plan de forma atómica (`publicar_plan`): el plan pasa a
+   * `publicado` y los demás planes del mismo paso vuelven a `borrador`, de
+   * modo que solo hay un plan publicado por paso.
+   */
+  publicar(id: string): Promise<ResultadoRepositorio<Plan>>;
   actualizar(
     id: string,
     cambios: PlanActualizacionInput,
@@ -83,6 +106,43 @@ export function crearRepositorioPlanes(
           .select("*")
           .single(),
       );
+    },
+
+    /**
+     * Guarda un plan y sus relevos en una sola transacción. La versión la
+     * calcula la base de datos y el plan empieza siempre como borrador.
+     *
+     * Los nombres de los argumentos son los de la función (`p_paso_id`,
+     * `p_seed`, `p_solver_version`, `p_stats`, `p_relevos`): PostgREST busca
+     * la firma por sus argumentos.
+     */
+    async guardar(pasoId, entrada) {
+      const resultado = await resultadoDeConsulta<Plan>(
+        client.rpc<Plan[]>("guardar_plan", {
+          p_paso_id: pasoId,
+          p_seed: entrada.seed,
+          p_solver_version: entrada.solverVersion,
+          p_stats: entrada.stats,
+          p_relevos: entrada.relevos.map((relevo) => ({
+            tramo_id: relevo.tramoId,
+            costalero_id: relevo.costaleroId,
+            estado: relevo.estado,
+          })),
+        }),
+      );
+      return { data: resultado.data[0] ?? null, error: resultado.error };
+    },
+
+    /**
+     * Publica un plan en una sola transacción (`publicar_plan`). El nombre del
+     * argumento es el de la función (`p_plan_id`): PostgREST busca la firma
+     * por sus argumentos.
+     */
+    async publicar(id) {
+      const resultado = await resultadoDeConsulta<Plan>(
+        client.rpc<Plan[]>("publicar_plan", { p_plan_id: id }),
+      );
+      return { data: resultado.data[0] ?? null, error: resultado.error };
     },
 
     /** Actualiza una fila existente de planes. */

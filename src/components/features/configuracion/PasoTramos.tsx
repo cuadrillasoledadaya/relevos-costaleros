@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -179,6 +181,12 @@ export function PasoTramos({
             >
               Guardar tramos
             </Button>
+            <Link
+              href={`/cuadrillas/${datos.cuadrillaId}/paso/${datos.paso.id}/tramos`}
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-border-strong bg-surface px-4 py-2 font-medium text-fg transition-colors hover:bg-surface-sunken"
+            >
+              Abrir el apartado de tramos
+            </Link>
             <p className="text-pequeno text-fg-muted">
               Los tramos que ya estaban guardados y no están en la propuesta no
               se borran aquí: se quitan en el apartado de tramos.

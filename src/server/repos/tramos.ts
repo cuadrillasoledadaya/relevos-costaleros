@@ -29,7 +29,32 @@ export type RepositorioTramos = {
     id: string,
     cambios: TramoActualizacionInput,
   ): Promise<ResultadoRepositorio<Tramo>>;
-  eliminar(id: string): Promise<ResultadoRepositorio<{ id: string }>>;
+  /**
+   * Actualiza el nombre y/o el tipo de un tramo y devuelve el recorrido
+   * completo en una sola transacción.
+   */
+  actualizarEnRecorrido(
+    id: string,
+    cambios: { name?: string; kind?: "salida" | "normal" | "entrada" },
+  ): Promise<ResultadoListaRepositorio<Tramo>>;
+  eliminar(id: string): Promise<ResultadoListaRepositorio<Tramo>>;
+  /**
+   * Añade un tramo al final del recorrido (en una sola transacción) y
+   * recalcula los tipos canónicos: el primero `salida`, el último `entrada`.
+   */
+  anexar(
+    pasoId: string,
+    nombre: string,
+  ): Promise<ResultadoListaRepositorio<Tramo>>;
+  /**
+   * Reordena los tramos del paso de forma transaccional: `orden` es la lista
+   * de ids en el orden nuevo. No deja ordinales repetidos ni huecos y
+   * recalcula los tipos canónicos (el primero `salida`, el último `entrada`).
+   */
+  reordenar(
+    pasoId: string,
+    orden: string[],
+  ): Promise<ResultadoListaRepositorio<Tramo>>;
 };
 
 export function crearRepositorioTramos(
@@ -91,15 +116,60 @@ export function crearRepositorioTramos(
       );
     },
 
-    /** Elimina una fila de tramos por su id. */
+    /**
+     * Actualiza un tramo y lee el recorrido completo en la misma transacción.
+     * El tipo forzado a mano se conserva: sólo los cambios estructurales
+     * recalculan los tipos canónicos.
+     *
+     * Los nombres de los argumentos son los de la función (`p_tramo_id`,
+     * `p_nombre`, `p_tipo`): PostgREST busca la firma por sus argumentos.
+     */
+    actualizarEnRecorrido(id, cambios) {
+      return resultadoDeConsulta(
+        client.rpc<Tramo[]>("actualizar_tramo", {
+          p_tramo_id: id,
+          p_nombre: cambios.name ?? null,
+          p_tipo: cambios.kind ?? null,
+        }),
+      );
+    },
+
+    /**
+     * Borra un tramo del recorrido. Lo hace la función `borrar_tramo`: borra y
+     * renumera en la misma transacción, así que nunca quedan huecos.
+     */
     eliminar(id) {
-      return resultadoDeFila(
-        client
-          .from<Tramo>("tramos")
-          .delete()
-          .eq("id", id)
-          .select("id")
-          .single(),
+      return resultadoDeConsulta(
+        client.rpc<Tramo[]>("borrar_tramo", { p_tramo_id: id }),
+      );
+    },
+
+    /**
+     * Añade un tramo al final del recorrido con la función `anexar_tramo`: el
+     * alta y el recálculo de los tipos ocurren en la misma transacción.
+     */
+    anexar(pasoId, nombre) {
+      return resultadoDeConsulta(
+        client.rpc<Tramo[]>("anexar_tramo", {
+          p_paso_id: pasoId,
+          p_nombre: nombre,
+        }),
+      );
+    },
+
+    /**
+     * Reordena los tramos del paso con la función `reordenar_tramos`: el
+     * cambio es atómico y recalcula los tipos canónicos del recorrido.
+     *
+     * Los nombres de los argumentos son los de la función (`p_paso_id`,
+     * `p_orden`): PostgREST busca la firma por sus argumentos.
+     */
+    reordenar(pasoId, orden) {
+      return resultadoDeConsulta(
+        client.rpc<Tramo[]>("reordenar_tramos", {
+          p_paso_id: pasoId,
+          p_orden: orden,
+        }),
       );
     },
   };

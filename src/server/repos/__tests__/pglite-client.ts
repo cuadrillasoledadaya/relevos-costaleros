@@ -2,6 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type {
   DbError,
   QueryResult,
+  RpcResult,
   SupabaseClientLike,
   TableClient,
 } from "../../supabase/types";
@@ -21,6 +22,38 @@ const TABLAS_PERMITIDAS = new Set([
   "relevos",
 ]);
 
+/**
+ * Funciones de la base de datos que el doble sabe llamar, con sus argumentos
+ * en el orden en que los declara la función.
+ */
+const FUNCIONES_PERMITIDAS: Record<
+  string,
+  Array<{ nombre: string; tipo: string }>
+> = {
+  reordenar_tramos: [
+    { nombre: "p_paso_id", tipo: "uuid" },
+    { nombre: "p_orden", tipo: "uuid[]" },
+  ],
+  anexar_tramo: [
+    { nombre: "p_paso_id", tipo: "uuid" },
+    { nombre: "p_nombre", tipo: "text" },
+  ],
+  borrar_tramo: [{ nombre: "p_tramo_id", tipo: "uuid" }],
+  actualizar_tramo: [
+    { nombre: "p_tramo_id", tipo: "uuid" },
+    { nombre: "p_nombre", tipo: "text" },
+    { nombre: "p_tipo", tipo: "text" },
+  ],
+  guardar_plan: [
+    { nombre: "p_paso_id", tipo: "uuid" },
+    { nombre: "p_seed", tipo: "bigint" },
+    { nombre: "p_solver_version", tipo: "text" },
+    { nombre: "p_stats", tipo: "jsonb" },
+    { nombre: "p_relevos", tipo: "jsonb" },
+  ],
+  publicar_plan: [{ nombre: "p_plan_id", tipo: "uuid" }],
+};
+
 function errorPglite(error: unknown): DbError {
   const mensaje = error instanceof Error ? error.message : String(error);
   return { message: mensaje, code: "PGLITE_ERROR" };
@@ -31,6 +64,23 @@ function identificadorSeguro(valor: string): string {
     throw new Error(`Identificador SQL no permitido: ${valor}`);
   }
   return `"${valor}"`;
+}
+
+/** Literal de array de Postgres para pasar un array de ids por parámetro. */
+function literalArray(valores: readonly unknown[]): string {
+  return `{${valores.map((valor) => `"${String(valor)}"`).join(",")}}`;
+}
+
+/** Prepara un argumento RPC para que su cast de Postgres reciba el valor. */
+function valorRpc(tipo: string, valor: unknown): unknown {
+  if (tipo === "jsonb") {
+    const json = JSON.stringify(valor);
+    return json === undefined ? "null" : json;
+  }
+  if (tipo.endsWith("[]")) {
+    return literalArray(Array.isArray(valor) ? valor : []);
+  }
+  return valor;
 }
 
 class PgliteTableClient<T> implements TableClient<T> {
@@ -236,6 +286,28 @@ export function crearClientePglite(db: PGlite): SupabaseClientLike {
     },
     from<T>(tabla: string): TableClient<T> {
       return new PgliteTableClient<T>(db, tabla);
+    },
+    async rpc<T>(
+      fn: string,
+      args: Record<string, unknown> = {},
+    ): Promise<RpcResult<T>> {
+      const declaracion = FUNCIONES_PERMITIDAS[fn];
+      if (!declaracion) {
+        throw new Error(`Función no permitida en el doble de prueba: ${fn}`);
+      }
+      const parametros: unknown[] = [];
+      const marcadores = declaracion.map((argumento, indice) => {
+        const valor = args[argumento.nombre];
+        parametros.push(valorRpc(argumento.tipo, valor));
+        return `$${indice + 1}::${argumento.tipo}`;
+      });
+      const sql = `select * from public.${identificadorSeguro(fn)}(${marcadores.join(", ")})`;
+      try {
+        const resultado = await db.query<T>(sql, parametros);
+        return { data: resultado.rows as unknown as T, error: null };
+      } catch (error) {
+        return { data: null, error: errorPglite(error) };
+      }
     },
   };
 }
