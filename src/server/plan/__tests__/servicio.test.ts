@@ -16,151 +16,28 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 
-import type {
-  EstadoCostoalero,
-  RelevoPlan,
-  RelevoPlanInput,
-} from "@/domain/modelo";
-import { verificarPlan } from "@/domain/solver";
-import { crearRepositorioPlanes, type Plan } from "@/server/repos/planes";
-import { crearRepositorioRelevos, type Relevo } from "@/server/repos/relevos";
+import type { PlanStats } from "@/domain/modelo";
+import { solvePlanDeRelevos, verificarPlan } from "@/domain/solver";
+import { crearRepositorioPlanes } from "@/server/repos/planes";
+import { crearRepositorioRelevos } from "@/server/repos/relevos";
 import type { SupabaseClientLike } from "@/server/supabase/types";
 
-import { IDS, crearFixturesBasicos } from "../../repos/__tests__/fixtures";
+import { IDS } from "../../repos/__tests__/fixtures";
 import { crearClientePglite } from "../../repos/__tests__/pglite-client";
 import {
   crearPgliteDePrueba,
   establecerActor,
   restaurarRol,
 } from "../../repos/__tests__/pglite";
+import {
+  PASO_SIN_SUPLENTES,
+  TRAMOS,
+  prepararPaso,
+  prepararPasoImposible,
+} from "./escenario";
 import { construirEntradaDelPlan } from "../entrada";
+import { reconstruirPlanDesdeRelevos } from "../lectura";
 import { crearServicioPlan } from "../servicio";
-
-/** Tercer costalero de la cuadrilla A: lo da de alta el capataz, sin cuenta. */
-const COSTALERO_C = "90000000-0000-4000-8000-0000000000a1";
-
-/** Paso sin suplentes: su única trabajadera no puede relevar nunca (F-1). */
-const PASO_SIN_SUPLENTES = "30000000-0000-4000-8000-0000000000a1";
-const TRABAJADORA_SIN_SUPLENTES = "50000000-0000-4000-8000-0000000000a1";
-
-/** Número de tramos del recorrido de prueba. */
-const TRAMOS = 6;
-
-/** Id del tramo `n` del recorrido de prueba. */
-function idTramo(ordinal: number): string {
-  return `60000000-0000-4000-8000-0000000000${String(ordinal).padStart(2, "0")}`;
-}
-
-/** Prepara el paso de prueba: una trabajadera con 3 costaleros y 6 tramos. */
-async function prepararPaso(db: PGlite): Promise<void> {
-  await crearFixturesBasicos(db);
-
-  await db.query(
-    `insert into public.costaleros (id, cuadrilla_id, full_name)
-     values ($1, $2, 'Costalero C')`,
-    [COSTALERO_C, IDS.cuadrillaA],
-  );
-  await db.query(
-    `insert into public.trabajaderas (id, paso_id, position, carga)
-     values ($1, $2, 1, 2)`,
-    [IDS.trabajaderaA, IDS.pasoA],
-  );
-  await db.query(
-    `insert into public.asignaciones (trabajadera_id, costalero_id, is_boquilla)
-     values ($1, $2, true), ($1, $3, true), ($1, $4, false)`,
-    [IDS.trabajaderaA, IDS.filaCostaleroA, IDS.filaCostaleroB, COSTALERO_C],
-  );
-
-  for (let ordinal = 1; ordinal <= TRAMOS; ordinal += 1) {
-    const kind =
-      ordinal === 1 ? "salida" : ordinal === TRAMOS ? "entrada" : "normal";
-    await db.query(
-      `insert into public.tramos (id, paso_id, name, ordinal, kind)
-       values ($1, $2, $3, $4, $5)`,
-      [idTramo(ordinal), IDS.pasoA, `Tramo ${String(ordinal)}`, ordinal, kind],
-    );
-  }
-}
-
-/** Prepara un paso sin suplentes: su plan es imposible (F-1). */
-async function prepararPasoImposible(db: PGlite): Promise<void> {
-  await db.query(
-    `insert into public.pasos (id, cuadrilla_id, name, season, num_trabajaderas)
-     values ($1, $2, 'Paso imposible', 2025, 1)`,
-    [PASO_SIN_SUPLENTES, IDS.cuadrillaA],
-  );
-  await db.query(
-    `insert into public.trabajaderas (id, paso_id, position, carga)
-     values ($1, $2, 1, 2)`,
-    [TRABAJADORA_SIN_SUPLENTES, PASO_SIN_SUPLENTES],
-  );
-  await db.query(
-    `insert into public.asignaciones (trabajadera_id, costalero_id, is_boquilla)
-     values ($1, $2, false)`,
-    [TRABAJADORA_SIN_SUPLENTES, COSTALERO_C],
-  );
-  for (let ordinal = 1; ordinal <= TRAMOS; ordinal += 1) {
-    const kind =
-      ordinal === 1 ? "salida" : ordinal === TRAMOS ? "entrada" : "normal";
-    await db.query(
-      `insert into public.tramos (id, paso_id, name, ordinal, kind)
-       values ($1, $2, $3, $4, $5)`,
-      [
-        `61000000-0000-4000-8000-0000000000${String(ordinal).padStart(2, "0")}`,
-        PASO_SIN_SUPLENTES,
-        `Tramo ${String(ordinal)}`,
-        ordinal,
-        kind,
-      ],
-    );
-  }
-}
-
-/**
- * Reconstruye el plan con lo que hay **guardado en la base de datos**: los
- * estados salen de las filas de `relevos` y el reparto por trabajadera se
- * vuelve a componer con los pools de la entrada.
- */
-function planDesdeLaBase(
-  plan: Plan,
-  relevos: Relevo[],
-  entrada: RelevoPlanInput,
-): RelevoPlan {
-  const estados: Record<string, Record<string, EstadoCostoalero>> = {};
-  for (const tramo of entrada.tramos) {
-    estados[tramo.id] = {};
-  }
-  for (const relevo of relevos) {
-    const delTramo = estados[relevo.tramo_id];
-    if (!delTramo) continue;
-    delTramo[relevo.costalero_id] = relevo.estado;
-  }
-
-  const porTrabajadera: RelevoPlan["porTrabajadera"] = {};
-  for (const tramo of entrada.tramos) {
-    const porLinea: Record<string, { enPaso: string[]; descansan: string[] }> =
-      {};
-    for (const trabajadera of entrada.trabajaderas) {
-      const enPaso: string[] = [];
-      const descansan: string[] = [];
-      for (const costalero of trabajadera.pool) {
-        const estado = estados[tramo.id]?.[costalero];
-        if (estado === "descanso") descansan.push(costalero);
-        if (estado === "en_paso") enPaso.push(costalero);
-      }
-      porLinea[trabajadera.id] = { enPaso, descansan };
-    }
-    porTrabajadera[tramo.id] = porLinea;
-  }
-
-  return {
-    pasoId: plan.paso_id,
-    seed: plan.seed,
-    solverVersion: plan.solver_version,
-    estados,
-    porTrabajadera,
-  };
-}
 
 describe("servicio del plan de relevos", () => {
   let db: PGlite;
@@ -221,7 +98,11 @@ describe("servicio del plan de relevos", () => {
     expect(relevos.data).toHaveLength(TRAMOS * 3);
 
     const stats = verificarPlan(
-      planDesdeLaBase(guardados.data, relevos.data, entrada.entrada),
+      reconstruirPlanDesdeRelevos(
+        guardados.data,
+        relevos.data,
+        entrada.entrada,
+      ),
       entrada.entrada,
     );
     expect(stats.cumplimiento.r1).toBe(true);
@@ -308,6 +189,37 @@ describe("servicio del plan de relevos", () => {
     ).toBe("borrador");
   }, 30_000);
 
+  it("probar varias semillas guarda la mejor según el orden de §8.2", async () => {
+    const servicio = crearServicioPlan(client);
+    const semillas = [20250330, 20250331, 20250332, 20250333];
+
+    const resultado = await servicio.calcularYGuardar(
+      { pasoId: IDS.pasoA, semillas },
+      IDS.capatazA,
+    );
+    if (!resultado.ok) {
+      throw new Error(
+        `El plan no se ha calculado: ${JSON.stringify(resultado)}`,
+      );
+    }
+
+    // El mejor según §8.2, calculado aquí con el solver real.
+    const entrada = await construirEntradaDelPlan(client, IDS.pasoA);
+    if (!entrada.ok) throw new Error("No se ha podido leer el paso.");
+    const candidatos = semillas
+      .map((seed) => solvePlanDeRelevos(entrada.entrada, { seed }))
+      .filter((candidato) => candidato.ok);
+    // En un empate se queda con la primera: el servicio hace lo mismo.
+    const mejor = candidatos.reduce((a, b) =>
+      esMejor(b.stats, a.stats) ? b : a,
+    );
+
+    const planes = crearRepositorioPlanes(client);
+    const guardado = await planes.obtenerPorId(resultado.planId);
+    expect(guardado.data?.seed).toBe(mejor.plan.seed);
+    expect(semillas).toContain(guardado.data?.seed);
+  }, 30_000);
+
   it("un plan imposible devuelve el diagnóstico y no guarda nada", async () => {
     await prepararPasoImposible(db);
     const servicio = crearServicioPlan(client);
@@ -366,3 +278,21 @@ describe("servicio del plan de relevos", () => {
     expect(publicacion.tipo).toBe("sin_permiso");
   }, 30_000);
 });
+
+/**
+ * El orden de §8.2, escrito aquí para el test: dispersión por pool, luego
+ * global y luego solapamiento entre salida y entrada.
+ */
+function esMejor(primero: PlanStats, segundo: PlanStats): boolean {
+  const suma = (stats: PlanStats): number =>
+    Object.values(stats.dispercionPorTrabajadera).reduce(
+      (total, valor) => total + valor,
+      0,
+    );
+  const diferencia = suma(primero) - suma(segundo);
+  if (diferencia !== 0) return diferencia < 0;
+  if (primero.dispercionGlobal !== segundo.dispercionGlobal) {
+    return primero.dispercionGlobal < segundo.dispercionGlobal;
+  }
+  return primero.solapamientoSalidaEntrada < segundo.solapamientoSalidaEntrada;
+}

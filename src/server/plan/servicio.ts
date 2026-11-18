@@ -24,6 +24,7 @@ import {
   solvePlanDeRelevos,
   verificarPlan,
 } from "@/domain/solver";
+import { diagnosticoGenerico } from "@/domain/solver/diagnostico";
 import { crearRepositorioPlanes } from "@/server/repos/planes";
 import type { SupabaseClientLike } from "@/server/supabase/types";
 
@@ -62,7 +63,7 @@ export type ResultadoPublicacionPlan =
 /** Operaciones del plan de relevos sobre un cliente de Supabase. */
 export type ServicioPlan = {
   calcularYGuardar(
-    entrada: { pasoId: string; seed?: number },
+    entrada: { pasoId: string; seed?: number; semillas?: number[] },
     usuarioId: string,
   ): Promise<ResultadoCalculoPlan>;
   listarHistorial(
@@ -86,7 +87,7 @@ const SIN_PERMISO =
  */
 export function crearServicioPlan(cliente: SupabaseClientLike): ServicioPlan {
   return {
-    async calcularYGuardar({ pasoId, seed }, usuarioId) {
+    async calcularYGuardar({ pasoId, seed, semillas }, usuarioId) {
       if (!(await esCapatazDelPaso(cliente, pasoId, usuarioId))) {
         return { ok: false, tipo: "sin_permiso", error: SIN_PERMISO };
       }
@@ -97,20 +98,46 @@ export function crearServicioPlan(cliente: SupabaseClientLike): ServicioPlan {
       }
       const entrada = construccion.entrada;
 
-      const semilla = seed ?? SEMILLA_POR_DEFECTO;
-      const resultado = solvePlanDeRelevos(entrada, { seed: semilla });
-      if (!resultado.ok) {
-        // Un plan imposible no es un error: es el diagnóstico con sus cifras.
+      // S-6: con varias semillas se prueban todas y se guarda la mejor
+      // (orden de §8.2). Con una sola, se usa esa.
+      const semillasUsadas =
+        semillas && semillas.length > 0
+          ? semillas
+          : [seed ?? SEMILLA_POR_DEFECTO];
+      let mejor: { plan: RelevoPlan; stats: PlanStats } | null = null;
+      let diagnostico: DiagnosticoInfeasibilidad | null = null;
+
+      for (const semilla of semillasUsadas) {
+        const resultado = solvePlanDeRelevos(entrada, { seed: semilla });
+        if (!resultado.ok) {
+          // Un plan imposible no es un error: es el diagnóstico con sus cifras.
+          if (diagnostico === null) diagnostico = resultado.diagnostico;
+          continue;
+        }
+        if (mejor === null || esMejorPlan(resultado.stats, mejor.stats)) {
+          mejor = resultado;
+        }
+      }
+
+      if (mejor === null) {
         return {
           ok: false,
           tipo: "infeasible",
-          diagnostico: resultado.diagnostico,
+          diagnostico:
+            diagnostico ??
+            diagnosticoGenerico(
+              "No se ha encontrado un plan válido para este paso",
+              { T: entrada.tramos.length },
+              "revisar el reparto de costaleros por trabajadera y el número de tramos",
+            ),
         };
       }
 
+      const semillaGuardada = mejor.plan.seed;
+
       // S-5: la app nunca muestra ni guarda un plan que no pase la
       // verificación independiente de R1 a R4.
-      const verificacion = verificarPlan(resultado.plan, entrada);
+      const verificacion = verificarPlan(mejor.plan, entrada);
       const cumple =
         verificacion.cumplimiento.r1 &&
         verificacion.cumplimiento.r2 &&
@@ -127,10 +154,10 @@ export function crearServicioPlan(cliente: SupabaseClientLike): ServicioPlan {
 
       const planes = crearRepositorioPlanes(cliente);
       const guardado = await planes.guardar(pasoId, {
-        seed: semilla,
-        solverVersion: resultado.plan.solverVersion,
-        stats: resultado.stats,
-        relevos: filasDeRelevos(resultado.plan),
+        seed: semillaGuardada,
+        solverVersion: mejor.plan.solverVersion,
+        stats: mejor.stats,
+        relevos: filasDeRelevos(mejor.plan),
       });
       if (guardado.error || !guardado.data) {
         return {
@@ -144,7 +171,7 @@ export function crearServicioPlan(cliente: SupabaseClientLike): ServicioPlan {
         ok: true,
         planId: guardado.data.id,
         version: guardado.data.version,
-        stats: resultado.stats,
+        stats: mejor.stats,
       };
     },
 
@@ -200,6 +227,31 @@ export function crearServicioPlan(cliente: SupabaseClientLike): ServicioPlan {
       return { ok: true };
     },
   };
+}
+
+/**
+ * ¿Es el primer plan mejor que el segundo? (orden de §8.2)
+ *
+ * 1. la dispersión dentro de cada pool (suma de `max − min` de cada
+ *    trabajadera);
+ * 2. la dispersión global entre costaleros del paso;
+ * 3. el solapamiento entre la salida y la entrada (R5).
+ */
+export function esMejorPlan(primero: PlanStats, segundo: PlanStats): boolean {
+  const dispersionPool = sumaDeDispersion(primero) - sumaDeDispersion(segundo);
+  if (dispersionPool !== 0) return dispersionPool < 0;
+  if (primero.dispercionGlobal !== segundo.dispercionGlobal) {
+    return primero.dispercionGlobal < segundo.dispercionGlobal;
+  }
+  return primero.solapamientoSalidaEntrada < segundo.solapamientoSalidaEntrada;
+}
+
+/** Suma de la dispersión dentro de cada pool (EQ de §8.2, paso 2). */
+function sumaDeDispersion(stats: PlanStats): number {
+  return Object.values(stats.dispercionPorTrabajadera).reduce(
+    (suma, valor) => suma + valor,
+    0,
+  );
 }
 
 /**
