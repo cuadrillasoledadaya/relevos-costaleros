@@ -137,19 +137,19 @@ Objetivo blando EQ: minimizar la dispersión de descansos dentro de cada pool y 
 
 ## Tasks
 
-| ID  | Specs                                  | Ruta                                                                                      | Unidad | Commit                                                                                 | Estado                  |
-| --- | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------- | ----------------------- |
-| T1  | S2, S4                                 | Bootstrap: scaffold, lint, CI, docs, spec dentro del repo                                 | W0     | `2d9c7d5`, `0c33f83`, `836d41b`, `798c8bf`                                             | Hecha                   |
-| T2  | S3                                     | Migraciones, RLS, seed, repositorios, schemas zod                                         | W1     | `1612d61` + `fix(db): ancla de pertenencia del costalero` (L6)                         | Hecha                   |
-| T3  | S5, S6, S7, S8, S9, S10, S11, S12, S13 | Dominio puro: glosario, modelo, reglas, factibilidad, solver                              | W2     | `1612d61`                                                                              | Hecha                   |
-| T4  | S1, S4                                 | Design system, PWA (manifest, iconos, service worker), shell                              | W3     | `1612d61`                                                                              | Hecha                   |
-| T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | cadena de 7 PRs (#2 a #8) + `fix(db): indice unico parcial`                            | Hecha                   |
-| T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | cadena de 5 PRs (#9 a #13)                                                             | Hecha                   |
-| T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `4b9e840`, `1b1dc2f`, `e531b18`, `c9dbec4`, `00b5053`, `a4ea723`, `e6dd758`, `289e030` | Entregada (PRs #21-#27) |
-| T8  | S13, S17                               | Plan de relevos: API de cálculo, pantalla principal, estadísticas, versiones              | W7     | `feat(plan): pantalla principal con vistas por tramo y por costalero`                  | Pendiente               |
-| T9  | S18, S19                               | Hoja por trabajadera, estilos de impresión A4, exportación CSV                            | W8     | `feat(hoja): vista por trabajadera con tabla de tramos y puestos`                      | Pendiente               |
-| T10 | S1, S4, S9–S13                         | E2E del flujo completo, offline, accesibilidad, performance                               | W9     | `test(e2e): flujo completo login a exportacion`                                        | Pendiente               |
-| T11 | S2, S3, S4                             | README, glosario publicado, modelo de datos, guía de relevos, manual del capataz, runbook | W10    | `docs(readme): guia de arranque del proyecto`                                          | Pendiente               |
+| ID  | Specs                                  | Ruta                                                                                      | Unidad | Commit                                                                                 | Estado                   |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------- | ------------------------ |
+| T1  | S2, S4                                 | Bootstrap: scaffold, lint, CI, docs, spec dentro del repo                                 | W0     | `2d9c7d5`, `0c33f83`, `836d41b`, `798c8bf`                                             | Hecha                    |
+| T2  | S3                                     | Migraciones, RLS, seed, repositorios, schemas zod                                         | W1     | `1612d61` + `fix(db): ancla de pertenencia del costalero` (L6)                         | Hecha                    |
+| T3  | S5, S6, S7, S8, S9, S10, S11, S12, S13 | Dominio puro: glosario, modelo, reglas, factibilidad, solver                              | W2     | `1612d61`                                                                              | Hecha                    |
+| T4  | S1, S4                                 | Design system, PWA (manifest, iconos, service worker), shell                              | W3     | `1612d61`                                                                              | Hecha                    |
+| T5  | S14, S15                               | Login, middleware de sesión, cuadrillas, costaleros, vista del costalero                  | W4     | cadena de 7 PRs (#2 a #8) + `fix(db): indice unico parcial`                            | Hecha                    |
+| T6  | S15, S16                               | Wizard del paso (6 pasos) con prechequeo de factibilidad                                  | W5     | cadena de 5 PRs (#9 a #13)                                                             | Hecha                    |
+| T7  | S16                                    | Apartado de tramos: alta, nombre, orden, salida/entrada                                   | W6     | `4b9e840`, `1b1dc2f`, `e531b18`, `c9dbec4`, `00b5053`, `a4ea723`, `e6dd758`, `289e030` | Entregada (PRs #21-#27)  |
+| T8  | S13, S17                               | Plan de relevos: API de cálculo, pantalla principal, estadísticas, versiones              | W7     | `12876d5` (A1), `9fadd19` (A2)                                                         | En curso (A1, A2 hechas) |
+| T9  | S18, S19                               | Hoja por trabajadera, estilos de impresión A4, exportación CSV                            | W8     | `feat(hoja): vista por trabajadera con tabla de tramos y puestos`                      | Pendiente                |
+| T10 | S1, S4, S9–S13                         | E2E del flujo completo, offline, accesibilidad, performance                               | W9     | `test(e2e): flujo completo login a exportacion`                                        | Pendiente                |
+| T11 | S2, S3, S4                             | README, glosario publicado, modelo de datos, guía de relevos, manual del capataz, runbook | W10    | `docs(readme): guia de arranque del proyecto`                                          | Pendiente                |
 
 ---
 
@@ -453,3 +453,29 @@ false`).
   3. La persistencia «en dos pasos dentro de una transacción» del briefing de W7 (`planes` +
      `relevos`) se tiene que resolver igual que aquí: con una función de Postgres, no con dos
      llamadas del servidor.
+
+### L17 · W7 (T8) en curso: persistencia transaccional y endpoint de cálculo
+
+- **Corte de entrega de W7**: la unidad se entrega en PRs encadenados, cada uno por debajo de
+  ~400 líneas escritas, para que el diff siga siendo revisable. PR #28 = A1 (persistencia),
+  PR #29 = A2 (endpoint de cálculo), y a continuación A3 (API de planes e historial) y B
+  (pantalla principal con estadísticas).
+- **W7-A1 · `12876d5`** — `guardar_plan` (migración `20250330001100_guardar_plan.sql`) escribe
+  `planes` + `relevos` en una sola transacción y calcula la versión en la base de datos con
+  `max(version)+1` sobre el paso bloqueado con `FOR UPDATE`. El repositorio gana
+  `RepositorioPlanes.guardar()`. Verificado en la nube: v3 → v4, `anon` y costalero bloqueados,
+  datos de demostración intactos.
+- **W7-A2 · `9fadd19`** — `POST /api/solve` (`src/app/api/solve/route.ts`, `runtime = "nodejs"`)
+  calcula el plan y **no persiste nada**. Orden de comprobaciones: 400 (cuerpo) → 401 (sesión) →
+  403 (propiedad) → 200. Un plan imposible no es un error: es un 200 con `ok: false` y el
+  diagnóstico con cifras y sugerencia. Un paso que la RLS no deja leer responde 403, para no
+  filtrar su existencia. 8 tests con el solver real envuelto en spy: los casos 400/401/403
+  comprueban que el solver **no** se llama.
+- **Verificado por el orquestador**: `pnpm vitest run src/app/api/solve` (8/8), `pnpm typecheck`
+  y `pnpm lint` sin salida. La suite completa y el build quedan para el cierre de la unidad W7.
+- **Contrato a respetar en A3 y B**: el campo del cuerpo se llama **`trabajadoras`** (con «e»),
+  no `trabajadoras`. `POST /api/planes` y la pantalla principal tienen que usar ese mismo nombre.
+- **Riesgo de la unidad**: `Risk: item 3` (contrato de la API pública) e `item 1` (la versión del
+  plan se calcula y se escribe en la base de datos). El plan de verificación de A1 ya se ejecutó
+  contra la nube; A3 y B WRITE en tablas y amplían la API, así que repiten la comprobación en
+  la nube antes de cerrar W7.
