@@ -15,6 +15,7 @@ import { revalidatePath } from "next/cache";
 
 import type { DiagnosticoInfeasibilidad, PlanStats } from "@/domain/modelo";
 import {
+  array,
   numero,
   objeto,
   opcional,
@@ -56,6 +57,7 @@ export type DependenciasPlan = {
 const calcularPlanSchema = objeto({
   pasoId: texto({ uuid: true }),
   seed: opcional(numero({ integer: true })),
+  semillas: opcional(array(numero({ integer: true }))),
 });
 
 const publicarPlanSchema = objeto({
@@ -105,7 +107,7 @@ function revalidarPantallaPlan(): void {
  * y su sugerencia (§11.4) para que la pantalla lo muestre.
  */
 export async function calcularPlan(
-  entrada: { pasoId: string; seed?: number },
+  entrada: { pasoId: string; seed?: number; semillas?: number[] },
   dependencias?: Partial<DependenciasPlan>,
 ): Promise<ResultadoAccionPlan<DatosPlanCreado>> {
   const validacion = calcularPlanSchema.safeParse(entrada);
@@ -119,7 +121,11 @@ export async function calcularPlan(
   }
 
   const resultado = await resueltas.servicio.calcularYGuardar(
-    { pasoId: validacion.data.pasoId, seed: validacion.data.seed },
+    {
+      pasoId: validacion.data.pasoId,
+      seed: validacion.data.seed,
+      semillas: validacion.data.semillas,
+    },
     resueltas.usuarioId,
   );
 
