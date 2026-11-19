@@ -36,6 +36,7 @@ export function Stepper({
     <nav aria-label={label} className={cn("w-full", className)}>
       <div
         role="progressbar"
+        aria-label={label}
         aria-valuemin={1}
         aria-valuemax={total}
         aria-valuenow={indice + 1}

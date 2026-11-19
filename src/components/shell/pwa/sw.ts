@@ -142,7 +142,14 @@ async function responderNavegacion(event: EventoFetch): Promise<Response> {
   try {
     const precargada = await event.preloadResponse;
     if (precargada) return precargada;
-    return await fetch(event.request);
+    const respuesta = await fetch(event.request);
+    // La página que se acaba de ver se guarda: sin conexión, el capataz
+    // puede volver a abrir la última hoja que miró.
+    if (respuesta.ok && respuesta.type === "basic") {
+      const cacheRuntime = await self.caches.open(CACHE_RUNTIME);
+      await cacheRuntime.put(event.request, respuesta.clone());
+    }
+    return respuesta;
   } catch {
     const cacheRuntime = await self.caches.open(CACHE_RUNTIME);
     const guardada = await cacheRuntime.match(event.request, {
