@@ -550,3 +550,46 @@ false`).
   anterior vuelve a `borrador` (un paso, un plan publicado); el costalero recibe «El plan no
   existe.» (la RLS no le deja ni verlo) y `anon` recibe «permission denied for function
   publicar_plan». Los planes de prueba se borraron y los datos de demostración quedan intactos.
+
+### L20 · W8 (T9): la hoja del capataz (P6) y la exportación (P7)
+
+- **Qué entrega**: `src/lib/export/csv.ts` (generador de CSV puro),
+  `src/server/hoja/plan.ts` (la lectura del plan que alimenta la hoja y los CSV),
+  los dos endpoints de §12 (`GET /api/export/relevos.csv` y
+  `GET /api/export/plan-por-costalero.csv`), la pantalla P6
+  (`src/app/(app)/cuadrillas/[cuadrillaId]/paso/[pasoId]/hoja/page.tsx`) con sus componentes en
+  `src/components/features/hoja/**` y `src/styles/print.css`.
+- **Decisiones del orquestador**:
+  1. **La hoja y los CSV salen de la misma lectura** (`leerPlanParaHoja`): el papel y el archivo no
+     pueden contradecirse. La lectura reconstruye el plan desde `relevos` y lo verifica (S-5): si el
+     plan guardado ya no encaja con el paso, no se imprime.
+  2. **Los puestos son los de §6** y los ocupa el plan, no la app: los que van en el paso, en el
+     orden canónico del pool, ocupan de izquierda a derecha los puestos de su trabajadera (patero,
+     fijador, corriente, fijador, patero; costeros en las intermedias). Con carga menor que 5, los
+     puestos sobrantes quedan vacíos. §10 no guarda el puesto de nadie y P-6 dice que la app no
+     decide quién es el corriente.
+  3. **El CSV de relevos tiene una fila por (tramo, costalero)** —`pool × T` filas— con el estado
+     (`en_paso`/`descanso`), el puesto (vacío si descansa) y la trabajadera. El de descansos lleva
+     una fila por costalero con los tramos en los que descansa y su total.
+  4. **CSV para Excel en español**: separador `;`, BOM UTF-8 (sin él Excel rompe los acentos) y
+     `Content-Disposition` con el nombre del archivo **dos veces**: en ASCII (la que usan los
+     navegadores antiguos) y en UTF-8 con el RFC 5987 (`filename*=UTF-8''…`). Con sólo la versión
+     ASCII, un paso con acentos llegaba al capataz como «demostraciÃ³n».
+  5. **Sólo el capataz dueño** de la cuadrilla del paso imprime o exporta; un plan ajeno responde
+     403 y uno inexistente 404.
+  6. **La impresión es de verdad**: `window.print()` con `@media print` en `src/styles/print.css`
+     (importado por la propia pantalla, no por `globals.css`): una hoja por página, sin navegación
+     ni controles, fondo blanco y ninguna fila partida. «Imprimir» deja sólo esa hoja; «Imprimir
+     todas», todas.
+- **Verificado por el orquestador**: `pnpm vitest run src/lib/export src/server/hoja src/app/api/export
+src/components/features/hoja` — **28 tests**; suite completa **271 tests en 43 ficheros** y
+  `pnpm build` en verde con las rutas nuevas (`/api/export/relevos.csv`,
+  `/api/export/plan-por-costalero.csv` y `/cuadrillas/[cuadrillaId]/paso/[pasoId]/hoja`).
+- **Verificado contra el Supabase cloud** (con la app compilada en local y una sesión real del
+  capataz): `POST /api/planes` crea el plan en la base de verdad; `GET /api/export/relevos.csv`
+  responde 200 con `text/csv; charset=utf-8`, el BOM en los bytes y 48 filas (12 costaleros ×
+  4 tramos) más la cabecera; `GET /api/export/plan-por-costalero.csv` responde 200 con 12 filas
+  más la cabecera; y la pantalla de la hoja responde 200 y enseña los puestos de §6, la
+  trabajadera, los botones de imprimir y los enlaces de exportación. Los planes de prueba se
+  borraron y los datos de demostración quedan intactos.
+- **Corte de la unidad**: dos commits y dos PRs encadenados — PR #33 (exportación) y PR #34 (hoja).

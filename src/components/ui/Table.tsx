@@ -52,7 +52,10 @@ export function Table({
   className,
 }: TableProps) {
   return (
-    <div className={cn("w-full overflow-x-auto", className)}>
+    // El contenedor con scroll horizontal tiene que poder recibir el foco:
+    // si no, quien navega con teclado no puede desplazar la tabla (regla
+    // «scrollable-region-focusable» de axe-core, hallada en W9).
+    <div className={cn("w-full overflow-x-auto", className)} tabIndex={0}>
       <table className="w-full border-collapse text-cuerpo">
         {caption ? (
           <caption className="p-2 text-left text-pequeno text-fg-muted">
